@@ -2,9 +2,10 @@
 #include <fstream>
 #include <utility>
 #include <vector>
-#include "Commands2.h"
-//#include "utils/input-parser.h"
+#include "Commands.h"
+#include "utils/input-parser.h"
 
+constexpr auto PROMPT_HEAD = "$ ";
 
 void workWithBinFiles() {
     // ofstream has auto. std::ios::out
@@ -71,7 +72,7 @@ bool handleUserInput(std::vector<std::string> arguments) {
         case ECommands::eExitCommand:
             return false;
         case ECommands::eUnknownCommand:
-            std::cout << "Unknown command: " << command << std::endl;
+            std::cout << "fs: Unknown command: " << command << std::endl;
             break;
     }
     return true;
@@ -79,12 +80,12 @@ bool handleUserInput(std::vector<std::string> arguments) {
 
 void startConsole() {
     std::string sInput;
-    std::vector<std::string> x;
+    std::vector<std::string> args;
     do {
-        std::cout << "$ ";
-        std::cin >> sInput;
-//        x = split(sInput, ' ');
-    } while(handleUserInput(x));
+        std::cout << PROMPT_HEAD;
+        std::getline(std::cin, sInput);
+        args = split(sInput, ' ');
+    } while(handleUserInput(args));
 }
 
 int main() {

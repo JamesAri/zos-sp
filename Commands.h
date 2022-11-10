@@ -1,5 +1,5 @@
-#ifndef ZOS_SP_COMMANDS2_H
-#define ZOS_SP_COMMANDS2_H
+#ifndef ZOS_SP_COMMANDS_H
+#define ZOS_SP_COMMANDS_H
 
 #include "ICommand.h"
 
@@ -23,7 +23,7 @@ enum class ECommands {
     eUnknownCommand,
 };
 
-ECommands getCommandCode(std::string const& string) {
+constexpr ECommands getCommandCode(std::string const& string) {
     if (string == "cp") return ECommands::eCpCommand;
     if (string == "mv") return ECommands::eMvCommand;
     if (string == "rm") return ECommands::eRmCommand;
@@ -248,4 +248,4 @@ public:
     int process() override;
 };
 
-#endif //ZOS_SP_COMMANDS2_H
+#endif //ZOS_SP_COMMANDS_H

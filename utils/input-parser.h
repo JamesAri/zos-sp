@@ -5,13 +5,14 @@
 #include <sstream>
 #include <vector>
 #include <iterator>
+#include <iostream>
 
-template <typename Out>
+template<typename Out>
 void split(const std::string &s, char delim, Out result) {
     std::istringstream iss(s);
     std::string item;
     while (std::getline(iss, item, delim)) {
-        if(!item.empty())
+        if (!item.empty())
             *result++ = item;
     }
 }
