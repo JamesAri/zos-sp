@@ -1,0 +1,10 @@
+# ninja log v5
+5	257	1668094632692581535	CMakeFiles/zos_sp.dir/fat.cpp.o	5fccf8db527a5c38
+4	1129	1667762004555497094	CMakeFiles/zos_sp.dir/commands/Command.cpp.o	fca2e4300fe78325
+3	861	1668113166535824863	CMakeFiles/zos_sp.dir/main.cpp.o	f2196f4e5fe7a8c9
+7	187	1668113182411160432	build.ninja	8dd0bb9b0c652160
+3	622	1668112601097227691	CMakeFiles/zos_sp.dir/commands.cpp.o	38e4be4859bf2e8d
+790	854	1668107131360886694	zos_sp	b725a4ca71b66b29
+4	942	1668094633377259931	CMakeFiles/zos_sp.dir/commands/ICommand.cpp.o	7de19f07a59c1c27
+4	594	1668113015276782461	CMakeFiles/zos_sp.dir/Commands.cpp.o	d41050a4bbeb73df
+4	602	1668113120161826618	CMakeFiles/zos_sp.dir/Commands2.cpp.o	61a1a448b38fe84b
