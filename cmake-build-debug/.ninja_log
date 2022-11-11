@@ -9,3 +9,7 @@
 4	1075	1668191915792074534	CMakeFiles/zos_sp.dir/Commands.cpp.o	d41050a4bbeb73df
 4	1371	1668191916090932077	CMakeFiles/zos_sp.dir/main.cpp.o	f2196f4e5fe7a8c9
 1371	1449	1668191916169785368	zos_sp	52f2782290043f2a
+5	1055	1668192325486679955	CMakeFiles/zos_sp.dir/ICommand.cpp.o	4867a7959d0cc0bd
+5	1069	1668192325505377339	CMakeFiles/zos_sp.dir/Commands.cpp.o	d41050a4bbeb73df
+3	612	1668192544225217271	CMakeFiles/zos_sp.dir/ICommand.cpp.o	4867a7959d0cc0bd
+3	673	1668192550069988050	CMakeFiles/zos_sp.dir/ICommand.cpp.o	4867a7959d0cc0bd

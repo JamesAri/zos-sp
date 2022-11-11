@@ -27,49 +27,49 @@ bool handleUserInput(std::vector<std::string> arguments) {
 
     switch (getCommandCode(command)) {
         case ECommands::eCpCommand:
-            CpCommand(options).run();
+            CpCommand(options).process();
             break;
         case ECommands::eMvCommand:
-            MvCommand(options).run();
+            MvCommand(options).process();
             break;
         case ECommands::eRmCommand:
-            RmCommand(options).run();
+            RmCommand(options).process();
             break;
         case ECommands::eMkdirCommand:
-            MkdirCommand(options).run();
+            MkdirCommand(options).process();
             break;
         case ECommands::eRmdirCommand:
-            RmdirCommand(options).run();
+            RmdirCommand(options).process();
             break;
         case ECommands::eLsCommand:
-            LsCommand(options).run();
+            LsCommand(options).process();
             break;
         case ECommands::eCatCommand:
-            CatCommand(options).run();
+            CatCommand(options).process();
             break;
         case ECommands::eCdCommand:
-            CdCommand(options).run();
+            CdCommand(options).process();
             break;
         case ECommands::ePwdCommand:
-            PwdCommand(options).run();
+            PwdCommand(options).process();
             break;
         case ECommands::eInfoCommand:
-            InfoCommand(options).run();
+            InfoCommand(options).process();
             break;
         case ECommands::eIncpCommand:
-            IncpCommand(options).run();
+            IncpCommand(options).process();
             break;
         case ECommands::eOutcpCommand:
-            OutcpCommand(options).run();
+            OutcpCommand(options).process();
             break;
         case ECommands::eLoadCommand:
-            LoadCommand(options).run();
+            LoadCommand(options).process();
             break;
         case ECommands::eFormatCommand:
-            FormatCommand(options).run();
+            FormatCommand(options).process();
             break;
         case ECommands::eDefragCommand:
-            DefragCommand(options).run();
+            DefragCommand(options).process();
             break;
         case ECommands::eExitCommand:
             return false;

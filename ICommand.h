@@ -18,14 +18,14 @@ class ICommand {
 public:
     virtual ~ICommand() = default;
 
-    virtual int run() = 0;
-
+    void process();
 
     explicit ICommand(const std::vector<std::string> &options);
 
 
 private:
     virtual bool validate_arguments() = 0;
+    virtual int run() = 0;
 
 protected:
     std::string mOpt1;

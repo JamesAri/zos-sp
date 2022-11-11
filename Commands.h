@@ -54,10 +54,10 @@ PATH NOT FOUND (neexistuje cílová cesta)
 class CpCommand : ICommand {
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -72,10 +72,10 @@ class MvCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -90,10 +90,10 @@ class RmCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -108,10 +108,10 @@ class MkdirCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -126,10 +126,10 @@ class RmdirCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -145,10 +145,10 @@ class LsCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -162,10 +162,10 @@ class CatCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -179,10 +179,10 @@ class CdCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -195,10 +195,10 @@ class PwdCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -212,10 +212,10 @@ class InfoCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -230,10 +230,10 @@ class IncpCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -248,10 +248,10 @@ class OutcpCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -266,10 +266,10 @@ class LoadCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -285,10 +285,10 @@ class FormatCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 /**
@@ -301,10 +301,10 @@ class DefragCommand : ICommand {
 
 public:
     using ICommand::ICommand;
-    int run() override;
 
 private:
     bool validate_arguments() override;
+    int run() override;
 };
 
 #endif //ZOS_SP_COMMANDS_H
