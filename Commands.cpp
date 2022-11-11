@@ -1,61 +1,121 @@
 #include "Commands.h"
 
-int CpCommand::process() {
-    return 0;
-};
-
-int MvCommand::process() {
+int CpCommand::run() {
     return 0;
 }
 
-int RmCommand::process() {
+bool CpCommand::validate_arguments() {
+    return false;
+}
+
+int MvCommand::run() {
     return 0;
 }
 
-int MkdirCommand::process() {
+bool MvCommand::validate_arguments() {
+    return false;
+}
+
+int RmCommand::run() {
     return 0;
 }
 
-int RmdirCommand::process() {
+bool RmCommand::validate_arguments() {
+    return false;
+}
+
+int MkdirCommand::run() {
     return 0;
 }
 
-int LsCommand::process() {
+bool MkdirCommand::validate_arguments() {
+    return false;
+}
+
+int RmdirCommand::run() {
     return 0;
 }
 
-int CatCommand::process() {
+bool RmdirCommand::validate_arguments() {
+    return false;
+}
+
+int LsCommand::run() {
     return 0;
 }
 
-int CdCommand::process() {
+bool LsCommand::validate_arguments() {
+    return false;
+}
+
+int CatCommand::run() {
     return 0;
 }
 
-int PwdCommand::process() {
+bool CatCommand::validate_arguments() {
+    return false;
+}
+
+int CdCommand::run() {
     return 0;
 }
 
-int InfoCommand::process() {
+bool CdCommand::validate_arguments() {
+    return false;
+}
+
+int PwdCommand::run() {
     return 0;
 }
 
-int IncpCommand::process() {
+bool PwdCommand::validate_arguments() {
+    return false;
+}
+
+int InfoCommand::run() {
     return 0;
 }
 
-int OutcpCommand::process() {
+bool InfoCommand::validate_arguments() {
+    return false;
+}
+
+int IncpCommand::run() {
     return 0;
 }
 
-int LoadCommand::process() {
+bool IncpCommand::validate_arguments() {
+    return false;
+}
+
+int OutcpCommand::run() {
     return 0;
 }
 
-int FormatCommand::process() {
+bool OutcpCommand::validate_arguments() {
+    return false;
+}
+
+int LoadCommand::run() {
     return 0;
 }
 
-int DefragCommand::process() {
+bool LoadCommand::validate_arguments() {
+    return false;
+}
+
+int FormatCommand::run() {
     return 0;
+}
+
+bool FormatCommand::validate_arguments() {
+    return false;
+}
+
+int DefragCommand::run() {
+    return 0;
+}
+
+bool DefragCommand::validate_arguments() {
+    return false;
 }

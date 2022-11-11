@@ -4,6 +4,7 @@
 #include <vector>
 #include "Commands.h"
 #include "utils/input-parser.h"
+#include "valarray"
 
 constexpr auto PROMPT_HEAD = "$ ";
 
@@ -21,53 +22,54 @@ void workWithBinFiles() {
 bool handleUserInput(std::vector<std::string> arguments) {
     if(arguments.empty()) return true;
 
-    std::string command = arguments[0];
+    auto command = arguments[0];
+    const auto options = std::vector<std::string>(arguments.begin() + 1, arguments.end());
 
     switch (getCommandCode(command)) {
         case ECommands::eCpCommand:
-            CpCommand().process();
+            CpCommand(options).run();
             break;
         case ECommands::eMvCommand:
-            MvCommand().process();
+            MvCommand(options).run();
             break;
         case ECommands::eRmCommand:
-            RmCommand().process();
+            RmCommand(options).run();
             break;
         case ECommands::eMkdirCommand:
-            MkdirCommand().process();
+            MkdirCommand(options).run();
             break;
         case ECommands::eRmdirCommand:
-            RmdirCommand().process();
+            RmdirCommand(options).run();
             break;
         case ECommands::eLsCommand:
-            LsCommand().process();
+            LsCommand(options).run();
             break;
         case ECommands::eCatCommand:
-            CatCommand().process();
+            CatCommand(options).run();
             break;
         case ECommands::eCdCommand:
-            CdCommand().process();
+            CdCommand(options).run();
             break;
         case ECommands::ePwdCommand:
-            PwdCommand().process();
+            PwdCommand(options).run();
             break;
         case ECommands::eInfoCommand:
-            InfoCommand().process();
+            InfoCommand(options).run();
             break;
         case ECommands::eIncpCommand:
-            IncpCommand().process();
+            IncpCommand(options).run();
             break;
         case ECommands::eOutcpCommand:
-            OutcpCommand().process();
+            OutcpCommand(options).run();
             break;
         case ECommands::eLoadCommand:
-            LoadCommand().process();
+            LoadCommand(options).run();
             break;
         case ECommands::eFormatCommand:
-            FormatCommand().process();
+            FormatCommand(options).run();
             break;
         case ECommands::eDefragCommand:
-            DefragCommand().process();
+            DefragCommand(options).run();
             break;
         case ECommands::eExitCommand:
             return false;
@@ -79,13 +81,19 @@ bool handleUserInput(std::vector<std::string> arguments) {
 }
 
 void startConsole() {
+    bool run = true;
     std::string sInput;
     std::vector<std::string> args;
     do {
         std::cout << PROMPT_HEAD;
         std::getline(std::cin, sInput);
         args = split(sInput, ' ');
-    } while(handleUserInput(args));
+        try {
+            run = handleUserInput(args);
+        } catch (InvalidOptionException &ex) {
+            std::cout << "fs: " << ex.what() << std::endl;
+        }
+    } while(run);
 }
 
 int main() {

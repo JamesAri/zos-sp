@@ -52,9 +52,12 @@ FILE NOT FOUND (není zdroj)
 PATH NOT FOUND (neexistuje cílová cesta)
  */
 class CpCommand : ICommand {
-
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -68,7 +71,11 @@ PATH NOT FOUND (neexistuje cílová cesta)
 class MvCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -82,7 +89,11 @@ PATH NOT FOUND (neexistuje cílová cesta)
 class RmCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -96,7 +107,11 @@ EXIST (nelze založit, již existuje)
 class MkdirCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -110,7 +125,11 @@ NOT EMPTY (adresář obsahuje podadresáře, nebo soubory)
 class RmdirCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -125,7 +144,11 @@ PATH NOT FOUND (neexistující adresář)
 class LsCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -138,7 +161,11 @@ FILE NOT FOUND (není zdroj)
 class CatCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -151,7 +178,11 @@ PATH NOT FOUND (neexistující cesta)
 class CdCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -163,7 +194,11 @@ PATH
 class PwdCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -176,7 +211,11 @@ FILE NOT FOUND (není zdroj)
 class InfoCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -190,7 +229,11 @@ PATH NOT FOUND (neexistuje cílová cesta)
 class IncpCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -204,7 +247,11 @@ PATH NOT FOUND (neexistuje cílová cesta)
 class OutcpCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -218,7 +265,11 @@ FILE NOT FOUND (není zdroj)
 class LoadCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -233,7 +284,11 @@ CANNOT CREATE FILE
 class FormatCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 /**
@@ -245,7 +300,11 @@ nebyla potřeba přesouvat datové bloky jiných souborů.
 class DefragCommand : ICommand {
 
 public:
-    int process() override;
+    using ICommand::ICommand;
+    int run() override;
+
+private:
+    bool validate_arguments() override;
 };
 
 #endif //ZOS_SP_COMMANDS_H

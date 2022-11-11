@@ -64,6 +64,12 @@ build CMakeFiles/zos_sp.dir/fat.cpp.o: CXX_COMPILER__zos_sp_Debug /Users/jakub.s
   OBJECT_DIR = CMakeFiles/zos_sp.dir
   OBJECT_FILE_DIR = CMakeFiles/zos_sp.dir
 
+build CMakeFiles/zos_sp.dir/ICommand.cpp.o: CXX_COMPILER__zos_sp_Debug /Users/jakub.slechta/git/zos-sp/ICommand.cpp || cmake_object_order_depends_target_zos_sp
+  DEP_FILE = CMakeFiles/zos_sp.dir/ICommand.cpp.o.d
+  FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk -std=gnu++14
+  OBJECT_DIR = CMakeFiles/zos_sp.dir
+  OBJECT_FILE_DIR = CMakeFiles/zos_sp.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target zos_sp
@@ -72,7 +78,7 @@ build CMakeFiles/zos_sp.dir/fat.cpp.o: CXX_COMPILER__zos_sp_Debug /Users/jakub.s
 #############################################
 # Link the executable zos_sp
 
-build zos_sp: CXX_EXECUTABLE_LINKER__zos_sp_Debug CMakeFiles/zos_sp.dir/main.cpp.o CMakeFiles/zos_sp.dir/Commands.cpp.o CMakeFiles/zos_sp.dir/fat.cpp.o
+build zos_sp: CXX_EXECUTABLE_LINKER__zos_sp_Debug CMakeFiles/zos_sp.dir/main.cpp.o CMakeFiles/zos_sp.dir/Commands.cpp.o CMakeFiles/zos_sp.dir/fat.cpp.o CMakeFiles/zos_sp.dir/ICommand.cpp.o
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk
   OBJECT_DIR = CMakeFiles/zos_sp.dir
   POST_BUILD = :
