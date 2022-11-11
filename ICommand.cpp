@@ -1,10 +1,12 @@
 #include "ICommand.h"
 
 ICommand::ICommand(const std::vector<std::string> &options) {
-    if (options.empty()) return;
+    mOptCount = static_cast<int>(options.size());
+    if (!mOptCount) return;
     mOpt1 = options[0];
-    if (options.size() == 2)
+    if (mOptCount == 2) {
         mOpt2 = options[1];
+    }
 }
 
 void ICommand::process() {

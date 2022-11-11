@@ -54,6 +54,7 @@ PATH NOT FOUND (neexistuje cílová cesta)
 class CpCommand : ICommand {
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -72,6 +73,7 @@ class MvCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -79,17 +81,18 @@ private:
 };
 
 /**
-Přesune soubor s1 do umístění s2, nebo přejmenuje s1 na s2
-mv s1 s2
+Smaže prázdný adresář a1
+rmdir a1
 Možný výsledek:
 OK
-FILE NOT FOUND (není zdroj)
-PATH NOT FOUND (neexistuje cílová cesta)
+FILE NOT FOUND (neexistující adresář)
+NOT EMPTY (adresář obsahuje podadresáře, nebo soubory)
  */
 class RmCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -108,6 +111,7 @@ class MkdirCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -126,6 +130,7 @@ class RmdirCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -145,6 +150,7 @@ class LsCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -162,6 +168,7 @@ class CatCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -179,6 +186,7 @@ class CdCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -195,6 +203,7 @@ class PwdCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -212,6 +221,7 @@ class InfoCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -230,6 +240,7 @@ class IncpCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -248,6 +259,7 @@ class OutcpCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -266,6 +278,7 @@ class LoadCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -285,6 +298,7 @@ class FormatCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;
@@ -301,6 +315,7 @@ class DefragCommand : ICommand {
 
 public:
     using ICommand::ICommand;
+    using ICommand::process;
 
 private:
     bool validate_arguments() override;

@@ -4,7 +4,6 @@
 #include <vector>
 #include "Commands.h"
 #include "utils/input-parser.h"
-#include "valarray"
 
 constexpr auto PROMPT_HEAD = "$ ";
 

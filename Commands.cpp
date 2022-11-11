@@ -5,7 +5,7 @@ int CpCommand::run() {
 }
 
 bool CpCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 2;
 }
 
 int MvCommand::run() {
@@ -13,7 +13,7 @@ int MvCommand::run() {
 }
 
 bool MvCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 2;
 }
 
 int RmCommand::run() {
@@ -21,7 +21,7 @@ int RmCommand::run() {
 }
 
 bool RmCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 2;
 }
 
 int MkdirCommand::run() {
@@ -29,7 +29,7 @@ int MkdirCommand::run() {
 }
 
 bool MkdirCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 1;
 }
 
 int RmdirCommand::run() {
@@ -37,7 +37,7 @@ int RmdirCommand::run() {
 }
 
 bool RmdirCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 1;
 }
 
 int LsCommand::run() {
@@ -45,7 +45,7 @@ int LsCommand::run() {
 }
 
 bool LsCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 0 || this->mOptCount == 1;
 }
 
 int CatCommand::run() {
@@ -53,7 +53,7 @@ int CatCommand::run() {
 }
 
 bool CatCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 1;
 }
 
 int CdCommand::run() {
@@ -61,7 +61,7 @@ int CdCommand::run() {
 }
 
 bool CdCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 1;
 }
 
 int PwdCommand::run() {
@@ -69,7 +69,7 @@ int PwdCommand::run() {
 }
 
 bool PwdCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 0;
 }
 
 int InfoCommand::run() {
@@ -77,7 +77,7 @@ int InfoCommand::run() {
 }
 
 bool InfoCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 1;
 }
 
 int IncpCommand::run() {
@@ -85,7 +85,7 @@ int IncpCommand::run() {
 }
 
 bool IncpCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 2;
 }
 
 int OutcpCommand::run() {
@@ -93,7 +93,7 @@ int OutcpCommand::run() {
 }
 
 bool OutcpCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 2;
 }
 
 int LoadCommand::run() {
@@ -101,7 +101,7 @@ int LoadCommand::run() {
 }
 
 bool LoadCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 1;
 }
 
 int FormatCommand::run() {
@@ -109,7 +109,7 @@ int FormatCommand::run() {
 }
 
 bool FormatCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 1;
 }
 
 int DefragCommand::run() {
@@ -117,5 +117,5 @@ int DefragCommand::run() {
 }
 
 bool DefragCommand::validate_arguments() {
-    return false;
+    return this->mOptCount == 2;
 }

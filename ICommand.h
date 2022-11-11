@@ -28,6 +28,7 @@ private:
     virtual int run() = 0;
 
 protected:
+    int mOptCount;
     std::string mOpt1;
     std::string mOpt2;
 };
