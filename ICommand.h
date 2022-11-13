@@ -8,9 +8,13 @@
 #include <stdexcept>
 
 class InvalidOptionException : public std::exception {
+private:
+    std::string mErrMsg;
 public:
+    InvalidOptionException() : mErrMsg("invalid option(s)") {}
+    explicit InvalidOptionException(std::string &&errMsg) : mErrMsg(errMsg) {}
     const char *what() const _NOEXCEPT override {
-        return "invalid option(s)";
+        return this->mErrMsg.c_str();
     }
 };
 

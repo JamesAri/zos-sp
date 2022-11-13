@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
     auto pFS = std::make_shared<FileSystem>(fsFileName);
 //    FileSystem fs{fsFileName};
 
-    std::cout << pFS << std::endl;
+    std::cout << *pFS << std::endl;
 
     startConsole(pFS);
     return 0;

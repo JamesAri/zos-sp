@@ -1,4 +1,5 @@
 #include "Commands.h"
+#include "utils/string-utils.h"
 #include <algorithm>
 
 int CpCommand::run() {
@@ -106,13 +107,33 @@ bool LoadCommand::validate_arguments() {
 }
 
 int FormatCommand::run() {
-    this->mOpt1.erase(std::remove(this->mOpt1.begin(), this->mOpt1.end(), 'm'), this->mOpt1.end());
-    this->mFS->formatFS()
+    try {
+        this->mFS->formatFS(std::stoi(this->mOpt1));
+        std::cout << "OK" << std::endl;
+    } catch (...) {
+        std::cerr << "Internal error, terminating" << std::endl;
+        exit(1);
+    }
     return 0;
 }
 
 bool FormatCommand::validate_arguments() {
-    return this->mOptCount == 1;
+    if (this->mOptCount != 1) return false;
+    //    eraseAllSubString(this->mOpt1, allowedFormats[0]);
+
+    std::transform(this->mOpt1.begin(), this->mOpt1.end(), this->mOpt1.begin(),
+                   [](unsigned char c){ return std::toupper(c); });
+
+    std::vector<std::string> allowedFormats{"MB"};
+
+    auto pos = this->mOpt1.find(allowedFormats[0]);
+
+    if (pos == std::string::npos)
+        throw InvalidOptionException("CANNOT CREATE FILE (wrong unit)");
+
+    this->mOpt1.erase(pos, allowedFormats[0].length());
+
+    return is_number(this->mOpt1);
 }
 
 FormatCommand& FormatCommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
