@@ -3,4 +3,4 @@ project(zos_sp)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(zos_sp main.cpp Commands.h Commands.cpp ICommand.h ICommand.cpp utils/input-parser.h FileSystem.cpp FileSystem.h utils/stream-utils.h)
+add_executable(zos_sp main.cpp Commands.h Commands.cpp ICommand.h ICommand.cpp utils/input-parser.h FileSystem.cpp FileSystem.h utils/stream-utils.h utils/string-utils.cpp utils/string-utils.h)

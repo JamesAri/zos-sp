@@ -10,13 +10,15 @@ constexpr int32_t FAT_BAD_CLUSTER = INT32_MAX - 3; // ffff fffc
 
 constexpr auto SIGNATURE = "A20B0234P\00";
 constexpr auto SIGNATURE_LENGTH = 10;
-constexpr auto DEFAULT_FORMAT_SIZE = 1; // MB
+
+constexpr auto DEFAULT_FORMAT_SIZE = 100; // MB
 constexpr auto FORMAT_UNIT = 1'000'000; // MB -> B
+
 constexpr auto FAT_COUNT = 2;
 constexpr auto CLUSTER_SIZE = 512 * 8;
 
-constexpr auto ROOT_DIR_NAME = "/";
 constexpr auto ITEM_NAME_LENGTH = 11;
+constexpr auto ROOT_DIR_NAME = "/";
 
 
 class DirectoryItem {
@@ -81,7 +83,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, BootSector const &fs);
 
-    int getClusterCount() {return this->mClusterCount;};
+    int getClusterCount() const {return this->mClusterCount;};
 
 };
 

@@ -1,4 +1,5 @@
 #include "Commands.h"
+#include <algorithm>
 
 int CpCommand::run() {
     return 0;
@@ -105,11 +106,18 @@ bool LoadCommand::validate_arguments() {
 }
 
 int FormatCommand::run() {
+    this->mOpt1.erase(std::remove(this->mOpt1.begin(), this->mOpt1.end(), 'm'), this->mOpt1.end());
+    this->mFS->formatFS()
     return 0;
 }
 
 bool FormatCommand::validate_arguments() {
     return this->mOptCount == 1;
+}
+
+FormatCommand& FormatCommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
+    this->mFS = pFS;
+    return *this;
 }
 
 int DefragCommand::run() {

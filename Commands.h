@@ -2,6 +2,7 @@
 #define ZOS_SP_COMMANDS_H
 
 #include "ICommand.h"
+#include "FileSystem.h"
 
 enum class ECommands {
     eCpCommand,
@@ -301,7 +302,11 @@ public:
     using ICommand::ICommand;
     using ICommand::process;
 
+    FormatCommand& registerFS(const std::shared_ptr<FileSystem> &pFS);
+
 private:
+    std::shared_ptr<FileSystem> mFS;
+
     bool validate_arguments() override;
     int run() override;
 };

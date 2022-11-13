@@ -8,7 +8,7 @@
 
 constexpr auto PROMPT_HEAD = "$ ";
 
-bool handleUserInput(std::vector<std::string> arguments) {
+bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<FileSystem>& pFS) {
     if(arguments.empty()) return true;
 
     auto command = arguments[0];
@@ -55,7 +55,7 @@ bool handleUserInput(std::vector<std::string> arguments) {
             LoadCommand(options).process();
             break;
         case ECommands::eFormatCommand:
-            FormatCommand(options).process();
+            FormatCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eDefragCommand:
             DefragCommand(options).process();
@@ -69,7 +69,7 @@ bool handleUserInput(std::vector<std::string> arguments) {
     return true;
 }
 
-void startConsole() {
+void startConsole(const std::shared_ptr<FileSystem>& pFS) {
     bool run = true;
     std::string sInput;
     std::vector<std::string> args;
@@ -78,7 +78,7 @@ void startConsole() {
         std::getline(std::cin, sInput);
         args = split(sInput, ' ');
         try {
-            run = handleUserInput(args);
+            run = handleUserInput(args, pFS);
         } catch (InvalidOptionException &ex) {
             std::cout << "fs: " << ex.what() << std::endl;
         }
@@ -92,8 +92,12 @@ int main(int argc, char **argv) {
     }
 
     std::string fsFileName{argv[1]};
-    FileSystem fs{fsFileName};
-    std::cout << fs << std::endl;
-    startConsole();
+
+    auto pFS = std::make_shared<FileSystem>(fsFileName);
+//    FileSystem fs{fsFileName};
+
+    std::cout << pFS << std::endl;
+
+    startConsole(pFS);
     return 0;
 }

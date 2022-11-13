@@ -30,10 +30,10 @@ void DirectoryItem::read(std::ifstream &f) {
 }
 
 std::ostream &operator<<(std::ostream &os, DirectoryItem const &di) {
-    return os << "ItemName: " << di.mItemName.c_str() << "\n"
-              << "IsFile: " << di.mIsFile << "\n"
-              << "Size: " << di.mSize << "\n"
-              << "StartCluster: " << di.mStartCluster << "\n";
+    return os << "  ItemName: " << di.mItemName.c_str() << "\n"
+              << "  IsFile: " << di.mIsFile << "\n"
+              << "  Size: " << di.mSize << "\n"
+              << "  StartCluster: " << di.mStartCluster << "\n";
 }
 
 FAT::FAT() {
@@ -49,7 +49,7 @@ void FAT::read(std::ifstream &f) {
 }
 
 std::ostream &operator<<(std::ostream &os, FAT const &fs) {
-    return os << "FAT" << "\n";
+    return os << "  FAT" << "\n";
 }
 
 BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
@@ -93,14 +93,14 @@ void BootSector::read(std::ifstream &f) {
 }
 
 std::ostream &operator<<(std::ostream &os, BootSector const &bs) {
-    return os << "Signature: " << bs.mSignature.c_str() << "\n"
-              << "ClusterSize: " << bs.mClusterSize << "\n"
-              << "ClusterCount: " << bs.mClusterCount << "\n"
-              << "DiskSize: " << bs.mDiskSize / FORMAT_UNIT << "MB" << "\n"
-              << "FatCount: " << bs.mFatCount << "\n"
-              << "Fat1StartAddress: " << bs.mFat1StartAddress << "\n"
-              << "Fat2StartAddress: " << bs.mFat2StartAddress << "\n"
-              << "DataStartAddress: " << bs.mDataStartAddress << "\n";
+    return os << "  Signature: " << bs.mSignature.c_str() << "\n"
+              << "  ClusterSize: " << bs.mClusterSize << "\n"
+              << "  ClusterCount: " << bs.mClusterCount << "\n"
+              << "  DiskSize: " << bs.mDiskSize / FORMAT_UNIT << "MB" << "\n"
+              << "  FatCount: " << bs.mFatCount << "\n"
+              << "  Fat1StartAddress: " << bs.mFat1StartAddress << "\n"
+              << "  Fat2StartAddress: " << bs.mFat2StartAddress << "\n"
+              << "  DataStartAddress: " << bs.mDataStartAddress << "\n";
 }
 
 
@@ -110,7 +110,7 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
         try {
             this->read(f_in);
         } catch (...) {
-            std::cerr << "Error occurred during the loading process. Input file might be corrupted." << std::endl;
+            std::cerr << "An error occurred during the loading process. Input file might be corrupted." << std::endl;
         }
     else
         this->formatFS();
@@ -136,12 +136,12 @@ void FileSystem::read(std::ifstream &f) {
 }
 
 std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
-    return os << "\n ==========    FILE SYSTEM SPECS    ========== \n\n"
+    return os << "==========    FILE SYSTEM SPECS    ========== \n\n"
               << "BOOT-SECTOR\n" << fs.mBootSector << "\n"
               << "FAT1:\n" << fs.mFat1 << "\n"
               << "FAT2:\n" << fs.mFat2 << "\n"
               << "ROOT-DIR:\n" << fs.mRootDir << "\n"
-              << "\n ========== END OF FILE SYSTEM SPECS ========== \n";
+              << "========== END OF FILE SYSTEM SPECS ========== \n";
 }
 
 void FileSystem::formatFS(int size) {
