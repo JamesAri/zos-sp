@@ -53,10 +53,11 @@ OK
 FILE NOT FOUND (není zdroj)
 PATH NOT FOUND (neexistuje cílová cesta)
  */
-class CpCommand : ICommand {
+class CpCommand : public ICommand {
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -71,11 +72,12 @@ OK
 FILE NOT FOUND (není zdroj)
 PATH NOT FOUND (neexistuje cílová cesta)
  */
-class MvCommand : ICommand {
+class MvCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -90,11 +92,12 @@ OK
 FILE NOT FOUND (neexistující adresář)
 NOT EMPTY (adresář obsahuje podadresáře, nebo soubory)
  */
-class RmCommand : ICommand {
+class RmCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -109,11 +112,12 @@ OK
 PATH NOT FOUND (neexistuje zadaná cesta)
 EXIST (nelze založit, již existuje)
  */
-class MkdirCommand : ICommand {
+class MkdirCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -128,11 +132,12 @@ OK
 FILE NOT FOUND (neexistující adresář)
 NOT EMPTY (adresář obsahuje podadresáře, nebo soubory)
  */
-class RmdirCommand : ICommand {
+class RmdirCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -148,11 +153,12 @@ FILE: f1
 DIR: a2
 PATH NOT FOUND (neexistující adresář)
  */
-class LsCommand : ICommand {
+class LsCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -166,11 +172,12 @@ Možný výsledek:
 OBSAH
 FILE NOT FOUND (není zdroj)
  */
-class CatCommand : ICommand {
+class CatCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -184,11 +191,12 @@ Možný výsledek:
 OK
 PATH NOT FOUND (neexistující cesta)
  */
-class CdCommand : ICommand {
+class CdCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -201,11 +209,12 @@ pwd
 Možný výsledek:
 PATH
  */
-class PwdCommand : ICommand {
+class PwdCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -219,11 +228,12 @@ Možný výsledek:
 S1 2,3,4,7,10
 FILE NOT FOUND (není zdroj)
  */
-class InfoCommand : ICommand {
+class InfoCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -238,11 +248,12 @@ OK
 FILE NOT FOUND (není zdroj)
 PATH NOT FOUND (neexistuje cílová cesta)
  */
-class IncpCommand : ICommand {
+class IncpCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -257,11 +268,12 @@ OK
 FILE NOT FOUND (není zdroj)
 PATH NOT FOUND (neexistuje cílová cesta)
  */
-class OutcpCommand : ICommand {
+class OutcpCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -276,11 +288,12 @@ Možný výsledek:
 OK
 FILE NOT FOUND (není zdroj)
  */
-class LoadCommand : ICommand {
+class LoadCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;
@@ -296,16 +309,13 @@ Možný výsledek:
 OK
 CANNOT CREATE FILE
  */
-class FormatCommand : ICommand {
+class FormatCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
-
-    FormatCommand& registerFS(const std::shared_ptr<FileSystem> &pFS);
-
+    using ICommand::registerFS;
 private:
-    std::shared_ptr<FileSystem> mFS;
 
     bool validate_arguments() override;
     int run() override;
@@ -317,11 +327,12 @@ příkaz defrag s1 – Zajistí, že datové bloky souboru s1 budou ve filesyst�
 což si můžeme ověřit příkazem info. Předpokládáme, že v systému je dostatek místa, aby
 nebyla potřeba přesouvat datové bloky jiných souborů.
  */
-class DefragCommand : ICommand {
+class DefragCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
     using ICommand::process;
+    using ICommand::registerFS;
 
 private:
     bool validate_arguments() override;

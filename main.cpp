@@ -55,7 +55,8 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             LoadCommand(options).process();
             break;
         case ECommands::eFormatCommand:
-            FormatCommand(options).registerFS(pFS).process();
+//            FormatCommand(options).registerFS(pFS).process();
+            FormatCommand(options).process();
             break;
         case ECommands::eDefragCommand:
             DefragCommand(options).process();
@@ -94,7 +95,6 @@ int main(int argc, char **argv) {
     std::string fsFileName{argv[1]};
 
     auto pFS = std::make_shared<FileSystem>(fsFileName);
-//    FileSystem fs{fsFileName};
 
     std::cout << *pFS << std::endl;
 

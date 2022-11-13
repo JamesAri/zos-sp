@@ -15,3 +15,8 @@ void ICommand::process() {
     }
     this->run();
 }
+
+//ICommand &ICommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
+//    this->mFS = pFS;
+//    return *this;
+//}

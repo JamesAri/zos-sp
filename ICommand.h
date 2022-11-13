@@ -1,6 +1,7 @@
 #ifndef ZOS_SP_ICOMMAND_H
 #define ZOS_SP_ICOMMAND_H
 
+#include "Commands.h"
 #include <utility>
 #include <vector>
 #include <iostream>
@@ -12,13 +13,26 @@ private:
     std::string mErrMsg;
 public:
     InvalidOptionException() : mErrMsg("invalid option(s)") {}
+
     explicit InvalidOptionException(std::string &&errMsg) : mErrMsg(errMsg) {}
+
     const char *what() const _NOEXCEPT override {
         return this->mErrMsg.c_str();
     }
 };
 
 class ICommand {
+private:
+    virtual bool validate_arguments() = 0;
+
+    virtual int run() = 0;
+
+protected:
+    std::shared_ptr<FileSystem> mFS;
+    int mOptCount;
+    std::string mOpt1;
+    std::string mOpt2;
+
 public:
     virtual ~ICommand() = default;
 
@@ -26,15 +40,7 @@ public:
 
     explicit ICommand(const std::vector<std::string> &options);
 
-
-private:
-    virtual bool validate_arguments() = 0;
-    virtual int run() = 0;
-
-protected:
-    int mOptCount;
-    std::string mOpt1;
-    std::string mOpt2;
+//    ICommand &registerFS(const std::shared_ptr<FileSystem> &pFS);
 };
 
 

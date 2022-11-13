@@ -137,10 +137,10 @@ bool FormatCommand::validate_arguments() {
     return true;
 }
 
-FormatCommand& FormatCommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
-    this->mFS = pFS;
-    return *this;
-}
+//FormatCommand& FormatCommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
+//    this->mFS = pFS;
+//    return *this;
+//}
 
 int DefragCommand::run() {
     return 0;
