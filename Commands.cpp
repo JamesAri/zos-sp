@@ -132,8 +132,9 @@ bool FormatCommand::validate_arguments() {
         throw InvalidOptionException("CANNOT CREATE FILE (wrong unit)");
 
     this->mOpt1.erase(pos, allowedFormats[0].length());
-
-    return is_number(this->mOpt1);
+    if (!is_number(this->mOpt1))
+        throw InvalidOptionException("CANNOT CREATE FILE (not a number)");
+    return true;
 }
 
 FormatCommand& FormatCommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
