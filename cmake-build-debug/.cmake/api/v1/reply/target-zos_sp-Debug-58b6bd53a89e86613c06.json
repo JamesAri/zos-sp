@@ -101,7 +101,8 @@
 				1,
 				3,
 				5,
-				7
+				7,
+				8
 			]
 		}
 	],
@@ -149,6 +150,11 @@
 		{
 			"backtrace" : 1,
 			"path" : "FileSystem.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"path" : "utils/stream-utils.h",
 			"sourceGroupIndex" : 1
 		}
 	],

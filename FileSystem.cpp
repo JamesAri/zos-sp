@@ -1,35 +1,41 @@
 #include "FileSystem.h"
+#include "utils/stream-utils.h"
+
 #include <iostream>
 #include <vector>
+#include <string>
 
-template<typename T>
-void write_util(std::ofstream &f, T& stream, int streamSize = sizeof(T)) {
-    f.write(reinterpret_cast<char*>(stream), streamSize);
+DirectoryItem::DirectoryItem(std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
+        mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
+    if (mItemName.length() >= ITEM_NAME_LENGTH) {
+        throw std::runtime_error(std::string("Error: file name too long. Max. characters are ") +
+                                 std::to_string(ITEM_NAME_LENGTH - 1) + std::string("\n"));
+    }
+    mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
-
-template<typename T>
-void read(std::ifstream &f, T& stream, int streamSize = sizeof(T)) {
-    f.read(reinterpret_cast<char*>(stream), streamSize);
-}
-
 
 void DirectoryItem::write(std::ofstream &f) {
-//    write_util(f, this->mItemName, ITEM_NAME_LENGTH);
-//    write_util(f, this->mIsFile);
-    f.write(this->mItemName, ITEM_NAME_LENGTH);
-    f.write(reinterpret_cast<char*>(&this->mIsFile), sizeof(this->mIsFile));
-    f.write(reinterpret_cast<char*>(&this->mSize), sizeof(this->mSize));
-    f.write(reinterpret_cast<char*>(&this->mStartCluster), sizeof(this->mStartCluster));
+    writeToStream(f, this->mItemName, ITEM_NAME_LENGTH);
+    writeToStream(f, this->mIsFile);
+    writeToStream(f, this->mSize);
+    writeToStream(f, this->mStartCluster);
 }
 
 void DirectoryItem::read(std::ifstream &f) {
-    f.read(this->mItemName, ITEM_NAME_LENGTH);
-    f.read(reinterpret_cast<char*>(&this->mIsFile), sizeof(this->mIsFile));
-    f.read(reinterpret_cast<char*>(&this->mSize), sizeof(this->mSize));
-    f.read(reinterpret_cast<char*>(&this->mStartCluster), sizeof(this->mStartCluster));
+    readFromStream(f, this->mItemName, ITEM_NAME_LENGTH);
+    readFromStream(f, this->mIsFile);
+    readFromStream(f, this->mSize);
+    readFromStream(f, this->mStartCluster);
 }
 
-void FAT::read(std::ifstream &f) {
+std::ostream &operator<<(std::ostream &os, DirectoryItem const &fs) {
+    return os << "ItemName: " << fs.mItemName << "\n"
+              << "IsFile: " << fs.mIsFile << "\n"
+              << "Size: " << fs.mSize << "\n"
+              << "StartCluster: " << fs.mStartCluster << "\n";
+}
+
+FAT::FAT() {
 
 }
 
@@ -37,25 +43,75 @@ void FAT::write(std::ofstream &f) {
 
 }
 
-BootSector::BootSector() : mSignature(SIGNATURE) {
+void FAT::read(std::ifstream &f) {
 
+}
+
+std::ostream &operator<<(std::ostream &os, FAT const &fs) {
+    return os << "FAT" << "\n";
+}
+
+BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
+    this->mSignature = SIGNATURE;
+    this->mClusterSize = CLUSTER_SIZE;
+    this->mFatCount = FAT_COUNT;
+    this->mFat1StartAddress = BootSector::SIZE;
+    this->mFat2StartAddress = BootSector::SIZE + FAT::SIZE;
+    auto metadataEndAddress = BootSector::SIZE + FAT_COUNT * FAT::SIZE + sizeof(this->mPaddingSize);
+    auto freeSpaceInBytes = this->mDiskSize - metadataEndAddress;
+    this->mPaddingSize = static_cast<int>(freeSpaceInBytes % this->mClusterSize);
+    this->mPadding = std::string(mPaddingSize, '\00');
+    this->mClusterCount = static_cast<int>(freeSpaceInBytes / this->mClusterSize);
+    this->mDataStartAddress = static_cast<int>(mPaddingSize + metadataEndAddress);
 }
 
 void BootSector::write(std::ofstream &f) {
-    f.write(this->mSignature, SIGNATURE_LENGTH);
+    writeToStream(f, this->mSignature, SIGNATURE_LENGTH);
+    writeToStream(f, this->mClusterSize);
+    writeToStream(f, this->mClusterCount);
+    writeToStream(f, this->mDiskSize);
+    writeToStream(f, this->mFatCount);
+    writeToStream(f, this->mFat1StartAddress);
+    writeToStream(f, this->mFat2StartAddress);
+    writeToStream(f, this->mPaddingSize);
+    writeToStream(f, this->mPadding, this->mPaddingSize);
+    writeToStream(f, this->mDataStartAddress);
 }
 
 void BootSector::read(std::ifstream &f) {
-    f.read(this->mSignature, SIGNATURE_LENGTH);
+    readFromStream(f, this->mSignature, SIGNATURE_LENGTH);
+    readFromStream(f, this->mClusterSize);
+    readFromStream(f, this->mClusterCount);
+    readFromStream(f, this->mDiskSize);
+    readFromStream(f, this->mFatCount);
+    readFromStream(f, this->mFat1StartAddress);
+    readFromStream(f, this->mFat2StartAddress);
+    readFromStream(f, this->mPaddingSize);
+    readFromStream(f, this->mPadding, this->mPaddingSize);
+    readFromStream(f, this->mDataStartAddress);
+}
+
+std::ostream &operator<<(std::ostream &os, BootSector const &fs) {
+    return os << "Signature: " << fs.mSignature << "\n"
+              << "ClusterSize: " << fs.mClusterSize << "\n"
+              << "ClusterCount: " << fs.mClusterCount << "\n"
+              << "DiskSize: " << fs.mDiskSize / FORMAT_UNIT << "MB" << "\n"
+              << "FatCount: " << fs.mFatCount << "\n"
+              << "Fat1StartAddress: " << fs.mFat1StartAddress << "\n"
+              << "Fat2StartAddress: " << fs.mFat2StartAddress << "\n"
+              << "DataStartAddress: " << fs.mDataStartAddress << "\n";
 }
 
 FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
-    std::ifstream input(fileName.c_str(), std::ios::binary);
-    if (input.good()) {
-        this->read(input);
+    std::ifstream f_in(fileName, std::ios::binary | std::ios::in);
+    if (f_in.good()) {
+        this->read(f_in);
     } else {
-        std::ofstream output(fileName.c_str(), std::ios::binary);
-        this->write(output);
+        f_in.close();
+        std::ofstream f_out{fileName, std::ios::binary | std::ios::out};
+        this->formatFS(DEFAULT_FORMAT_SIZE);
+        this->write(f_out);
+//        f_out.flush();
     }
 }
 
@@ -71,9 +127,23 @@ void FileSystem::read(std::ifstream &f) {
     this->mFat1.read(f);
     this->mFat2.read(f);
     this->mRootDir.read(f);
+}
+
+std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
+    return os << "\n ========== FILE SYSTEM SPECS ========== \n\n"
+              << "BOOT-SECTOR\n" << fs.mBootSector << "\n"
+              << "FAT1:\n" << fs.mFat1 << "\n"
+              << "FAT2:\n" << fs.mFat2 << "\n"
+              << "ROOT-DIR:\n" << fs.mRootDir << "\n"
+              << "\n ========== END OF FILE SYSTEM SPECS ========== \n";
+}
+
+void FileSystem::formatFS(int size) {
+    this->mBootSector = BootSector{size};
+    this->mFat1 = FAT{};
+    this->mFat2 = FAT{};
+    this->mRootDir = DirectoryItem{std::string(ROOT_DIR_NAME), false, 0, 0};
+}
 
 //    std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(f), {});
 //    auto fsObjSize = sizeof(*this);
-}
-
-

@@ -1,25 +1,12 @@
+#include "FileSystem.h"
+#include "utils/input-parser.h"
+#include "Commands.h"
+
 #include <iostream>
-#include <fstream>
 #include <utility>
 #include <vector>
-#include "Commands.h"
-#include "utils/input-parser.h"
-#include "FileSystem.h"
 
 constexpr auto PROMPT_HEAD = "$ ";
-
-void workWithBinFiles() {
-//     ofstream has auto. std::ios::out
-    std::ofstream input("soubor.txt", std::ios::binary);
-//    input.seekg(0, input.end);
-//    auto fileSize = input.tellg();
-//    std::cout << fileSize << std::endl;
-    const char *binbuf = "Binarni \x00zapis.\x00";
-    const char *binbuf2 = "XD\x00";
-    input.write((char*)binbuf, 16);
-    input.write((char*)binbuf2, 3);
-}
-
 
 bool handleUserInput(std::vector<std::string> arguments) {
     if(arguments.empty()) return true;
@@ -106,6 +93,7 @@ int main(int argc, char **argv) {
 
     std::string fsFileName{argv[1]};
     FileSystem fs{fsFileName};
+    std::cout << fs << std::endl;
     startConsole();
     return 0;
 }
