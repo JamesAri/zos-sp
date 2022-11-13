@@ -4,17 +4,20 @@
 #include <vector>
 #include "Commands.h"
 #include "utils/input-parser.h"
+#include "FileSystem.h"
 
 constexpr auto PROMPT_HEAD = "$ ";
 
 void workWithBinFiles() {
-    // ofstream has auto. std::ios::out
-    std::ifstream input("soubor.txt", std::ios::binary);
-    input.seekg(0, input.end);
-    auto fileSize = input.tellg();
-    std::cout << fileSize << std::endl;
+//     ofstream has auto. std::ios::out
+    std::ofstream input("soubor.txt", std::ios::binary);
+//    input.seekg(0, input.end);
+//    auto fileSize = input.tellg();
+//    std::cout << fileSize << std::endl;
     const char *binbuf = "Binarni \x00zapis.\x00";
-//    input.write(binbuf, 14);
+    const char *binbuf2 = "XD\x00";
+    input.write((char*)binbuf, 16);
+    input.write((char*)binbuf2, 3);
 }
 
 
@@ -95,7 +98,14 @@ void startConsole() {
     } while(run);
 }
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        std::cerr << "Invalid argument.\n"
+                     "Usage: <executable> fs_file_name" << std::endl;
+    }
+
+    std::string fsFileName{argv[1]};
+    FileSystem fs{fsFileName};
     startConsole();
     return 0;
 }

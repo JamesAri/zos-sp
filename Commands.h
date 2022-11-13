@@ -19,6 +19,7 @@ enum class ECommands {
     eLoadCommand,
     eFormatCommand,
     eDefragCommand,
+    // commands with no class
     eExitCommand,
     eUnknownCommand,
 };
@@ -321,5 +322,6 @@ private:
     bool validate_arguments() override;
     int run() override;
 };
+
 
 #endif //ZOS_SP_COMMANDS_H

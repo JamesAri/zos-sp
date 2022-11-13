@@ -22,15 +22,20 @@
   <component name="ChangeListManager">
     <list default="true" id="3b54c10d-413f-4617-b6ea-dd2954fd685e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Commands.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Commands.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Commands.h" beforeDir="false" afterPath="$PROJECT_DIR$/Commands.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ICommand.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/ICommand.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ICommand.h" beforeDir="false" afterPath="$PROJECT_DIR$/ICommand.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/codemodel-v2-553a969b1beb8c8dc11e.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/index-2022-11-11T18-37-23-0952.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/target-zos_sp-Debug-3ca1a44ce39a95622d1a.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/ICommand.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/ICommand.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/commands.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/commands.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/main.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/main.cpp.o" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/build.ninja" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/build.ninja" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/zos_sp" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/zos_sp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fat.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/fat.h" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -77,7 +82,7 @@
         <option name="CLION.EXTERNAL.BUILD" enabled="true" />
       </method>
     </configuration>
-    <configuration name="zos_sp" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="zos_sp" TARGET_NAME="zos_sp" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="zos_sp" RUN_TARGET_NAME="zos_sp">
+    <configuration name="zos_sp" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="FS_A20B0243P.bin" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="zos_sp" TARGET_NAME="zos_sp" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="zos_sp" RUN_TARGET_NAME="zos_sp">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -93,7 +98,7 @@
       <updated>1668113837401</updated>
       <workItem from="1668113842357" duration="2248000" />
       <workItem from="1668176256754" duration="365000" />
-      <workItem from="1668187459602" duration="6640000" />
+      <workItem from="1668187459602" duration="18177000" />
     </task>
     <servers />
   </component>
