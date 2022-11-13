@@ -104,7 +104,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, FileSystem const &fs);
 
-    void formatFS(int size);
+    void formatFS(int size = DEFAULT_FORMAT_SIZE);
 };
 
 

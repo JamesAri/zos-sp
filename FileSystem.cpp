@@ -2,8 +2,6 @@
 #include "utils/stream-utils.h"
 
 #include <iostream>
-#include <vector>
-#include <string>
 
 DirectoryItem::DirectoryItem(std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
@@ -11,7 +9,7 @@ DirectoryItem::DirectoryItem(std::string &&mItemName, bool mIsFile, int mSize, i
         throw std::runtime_error(std::string("Error: file name too long. Max. characters are ") +
                                  std::to_string(ITEM_NAME_LENGTH - 1) + std::string("\n"));
     }
-    mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
+    this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
 void DirectoryItem::write(std::ofstream &f) {
@@ -92,7 +90,7 @@ void BootSector::read(std::ifstream &f) {
 }
 
 std::ostream &operator<<(std::ostream &os, BootSector const &fs) {
-    return os << "Signature: " << fs.mSignature << "\n"
+    return os << "Signature: " << fs.mSignature.c_str() << "\n"
               << "ClusterSize: " << fs.mClusterSize << "\n"
               << "ClusterCount: " << fs.mClusterCount << "\n"
               << "DiskSize: " << fs.mDiskSize / FORMAT_UNIT << "MB" << "\n"
@@ -102,17 +100,13 @@ std::ostream &operator<<(std::ostream &os, BootSector const &fs) {
               << "DataStartAddress: " << fs.mDataStartAddress << "\n";
 }
 
+
 FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
     std::ifstream f_in(fileName, std::ios::binary | std::ios::in);
-    if (f_in.good()) {
+    if (f_in.is_open())
         this->read(f_in);
-    } else {
-        f_in.close();
-        std::ofstream f_out{fileName, std::ios::binary | std::ios::out};
-        this->formatFS(DEFAULT_FORMAT_SIZE);
-        this->write(f_out);
-//        f_out.flush();
-    }
+    else
+        this->formatFS();
 }
 
 void FileSystem::write(std::ofstream &f) {
@@ -120,6 +114,7 @@ void FileSystem::write(std::ofstream &f) {
     this->mFat1.write(f);
     this->mFat2.write(f);
     this->mRootDir.write(f);
+    writeToStream(f, )
 }
 
 void FileSystem::read(std::ifstream &f) {
@@ -130,7 +125,7 @@ void FileSystem::read(std::ifstream &f) {
 }
 
 std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
-    return os << "\n ========== FILE SYSTEM SPECS ========== \n\n"
+    return os << "\n ==========    FILE SYSTEM SPECS    ========== \n\n"
               << "BOOT-SECTOR\n" << fs.mBootSector << "\n"
               << "FAT1:\n" << fs.mFat1 << "\n"
               << "FAT2:\n" << fs.mFat2 << "\n"
@@ -143,6 +138,9 @@ void FileSystem::formatFS(int size) {
     this->mFat1 = FAT{};
     this->mFat2 = FAT{};
     this->mRootDir = DirectoryItem{std::string(ROOT_DIR_NAME), false, 0, 0};
+
+    std::ofstream f_out{fileName, std::ios::binary | std::ios::out};
+    this->write(f_out);
 }
 
 //    std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(f), {});
