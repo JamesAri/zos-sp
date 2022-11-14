@@ -25,7 +25,7 @@ enum class ECommands {
     eUnknownCommand,
 };
 
-constexpr ECommands getCommandCode(std::string const& string) {
+constexpr ECommands getCommandCode(std::string const &string) {
     if (string == "cp") return ECommands::eCpCommand;
     if (string == "mv") return ECommands::eMvCommand;
     if (string == "rm") return ECommands::eRmCommand;
@@ -61,6 +61,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -81,6 +82,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -101,6 +103,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -120,7 +123,10 @@ public:
     using ICommand::registerFS;
 
 private:
+    std::vector<std::string> mAccumulator;
+
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -141,6 +147,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -162,6 +169,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -181,6 +189,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -200,6 +209,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -218,6 +228,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -237,6 +248,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -257,6 +269,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -277,6 +290,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -297,6 +311,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -318,6 +333,7 @@ public:
 private:
 
     bool validate_arguments() override;
+
     bool run() override;
 };
 
@@ -336,6 +352,7 @@ public:
 
 private:
     bool validate_arguments() override;
+
     bool run() override;
 };
 

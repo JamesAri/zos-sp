@@ -28,15 +28,38 @@ bool RmCommand::validate_arguments() {
 }
 
 bool MkdirCommand::run() {
+    auto newDirectoryName = this->mAccumulator.back();
+
+    for (const auto &fn: this->mAccumulator) {
+
+    }
+
+    std::ofstream stream(this->mFS->mFileName, std::ios::binary);
+
+    if (!stream.is_open()) {
+        throw std::runtime_error(FS_OPEN_ERROR);
+    }
+
+    stream.seekp(0); // todo
+
+    DirectoryEntry de{newDirectoryName, false, 0, 1}; // todo cluster
+    de.write(stream);
     return true;
 }
 
 bool MkdirCommand::validate_arguments() {
-    if(this->mOptCount != 1) return false;
-    if(!validateFilePath(this->mOpt1)) {
+    if (this->mOptCount != 1) return false;
+
+    if (!validateFilePath(this->mOpt1))
+        throw InvalidOptionException("invalid directory path");
+
+    this->mAccumulator = split(this->mOpt1, "/");
+    auto newDirectoryName = this->mAccumulator.back();
+
+    if (validateFileName(newDirectoryName))
         throw InvalidOptionException("invalid directory name");
-    }
-    // todo check if exists
+
+    // todo check if path exists
     return true;
 }
 
@@ -127,7 +150,7 @@ bool FormatCommand::validate_arguments() {
     //    eraseAllSubString(this->mOpt1, allowedFormats[0]);
 
     std::transform(this->mOpt1.begin(), this->mOpt1.end(), this->mOpt1.begin(),
-                   [](unsigned char c){ return std::toupper(c); });
+                   [](unsigned char c) { return std::toupper(c); });
 
     std::vector<std::string> allowedFormats{"MB"};
 

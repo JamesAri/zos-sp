@@ -1,26 +1,9 @@
 #ifndef ZOS_SP_FILESYSTEM_H
 #define ZOS_SP_FILESYSTEM_H
 
+#include "definitions.h"
 #include <string>
 #include <fstream>
-
-constexpr int32_t FAT_UNUSED = INT32_MAX - 1; // ffff fffe
-constexpr int32_t FAT_FILE_END = INT32_MAX - 2; // ffff fffd
-constexpr int32_t FAT_BAD_CLUSTER = INT32_MAX - 3; // ffff fffc
-
-constexpr auto SIGNATURE = "A20B0234P\00";
-constexpr auto SIGNATURE_LENGTH = 10;
-
-constexpr auto DEFAULT_FORMAT_SIZE = 100; // MB
-constexpr auto FORMAT_UNIT = 1'000'000; // MB -> B
-
-constexpr auto FAT_COUNT = 2;
-constexpr auto CLUSTER_SIZE = 512 * 8;
-
-constexpr auto ITEM_NAME_LENGTH = 11;
-constexpr auto ROOT_DIR_NAME = "/";
-
-
 
 class DirectoryEntry {
 private:
@@ -31,9 +14,11 @@ private:
 public:
     DirectoryEntry() {};
 
-    DirectoryEntry(std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster);
+    DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster);
 
-    static const int SIZE = ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
+    DirectoryEntry(const std::string &mItemName, bool mIsFile, int mSize, int mStartCluster);
+
+    static const int SIZE = ALLOWED_ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
 
     void write(std::ofstream &f);
 
@@ -42,25 +27,24 @@ public:
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };
 
-constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
 
 class FAT {
 
 public:
     static const int SIZE = 0;
 
-    FAT();
+    static int write(std::ofstream &f, int32_t pos);
 
-    void write(std::ofstream &f);
+    static int read(std::ifstream &f, int32_t pos);
 
-    void read(std::ifstream &f);
-
-    friend std::ostream &operator<<(std::ostream &os, FAT const &fs);
+    static void wipe(std::ofstream &f, int32_t startAddress, int32_t size);
 };
 
 
 class BootSector {
 private:
+    int mFatSize;
+public:
     std::string mSignature;
     int mClusterSize;
     int mClusterCount;
@@ -68,11 +52,10 @@ private:
     int mFatCount;             //pocet polozek kazde FAT tabulce
     int mFat1StartAddress;     //adresa pocatku FAT1 tabulky
     int mFat2StartAddress;     //adresa pocatku FAT2 tabulky
+    int mDataStartAddress;     //adresa pocatku datovych bloku (hl. adresar)
     int mPaddingSize;
     std::string mPadding;
-    int mDataStartAddress;     //adresa pocatku datovych bloku (hl. adresar)
 
-public:
     static const int SIZE = SIGNATURE_LENGTH + sizeof(mClusterSize) + sizeof(mClusterCount) +
                             sizeof(mDiskSize) + sizeof(mFatCount) + sizeof(mFat1StartAddress) +
                             sizeof(mFat2StartAddress) + sizeof(mDataStartAddress);
@@ -87,7 +70,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, BootSector const &fs);
 
-    int getClusterCount() const { return this->mClusterCount; };
+    int getFatSize() const { return this->mFatSize; };
 
 };
 
@@ -96,18 +79,15 @@ public:
  * FAT FS
  */
 class FileSystem {
-private:
-    std::string mFileName;
-    // actual memory structure
+public:
+    const std::string mFileName;
+
     BootSector mBootSector;
-    FAT mFat1;
-    FAT mFat2;
     DirectoryEntry mRootDir;
 
-public:
     explicit FileSystem(std::string &fileName);
 
-    void write(std::ofstream &f);
+    void write(std::ofstream &f, bool wipeData = false);
 
     void read(std::ifstream &f);
 
@@ -115,6 +95,8 @@ public:
 
     void formatFS(int size = DEFAULT_FORMAT_SIZE);
 };
+
+constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
 
 
 #endif //ZOS_SP_FILESYSTEM_H
