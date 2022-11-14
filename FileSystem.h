@@ -5,40 +5,43 @@
 #include <string>
 #include <fstream>
 
-// BOOT SECTOR
-// FAT1
-// FAT2
-// padding (0 >= padding > CLUSTER_SIZE) - zeros \00
-// DATA
+// MEMORY:
+//  BOOT SECTOR
+//  FAT1
+//  FAT2
+//  padding (0 <= padding < CLUSTER_SIZE), fill: (\00)
+//  DATA
 
 class DirectoryEntry {
-private:
+public:
     std::string mItemName;
     bool mIsFile;
     int mSize;                   //soubor: velikost, adresar: kolik ma entries
-    int mStartCluster;           //počáteční cluster položky
-public:
+    int mStartCluster;
+
     DirectoryEntry() {};
 
     DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster);
 
     DirectoryEntry(const std::string &mItemName, bool mIsFile, int mSize, int mStartCluster);
 
-    static const int SIZE = ALLOWED_ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
+    static const int SIZE = ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
 
     void write(std::ofstream &f);
 
     void read(std::ifstream &f);
+
+    // todo: static read, write like in FAT
 
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };
 
 
 class FAT {
+private:
+    FAT(){/* static class */}
 
 public:
-    static const int SIZE = 0;
-
     static int write(std::ofstream &f, int32_t pos);
 
     static int read(std::ifstream &f, int32_t pos);
@@ -60,7 +63,6 @@ public:
     int mFat2StartAddress;
     int mDataStartAddress;     //adresa pocatku datovych bloku (hl. adresar)
     int mPaddingSize;
-//    std::string mPadding;
 
     static const int SIZE = SIGNATURE_LENGTH + sizeof(mClusterSize) + sizeof(mClusterCount) +
                             sizeof(mDiskSize) + sizeof(mFatCount) + sizeof(mFat1StartAddress) +
@@ -99,6 +101,12 @@ public:
     friend std::ostream &operator<<(std::ostream &os, FileSystem const &fs);
 
     void formatFS(int size = DEFAULT_FORMAT_SIZE);
+
+    inline int clusterToAddress(int cluster);
+
+    inline int getFreeDirectoryEntryAddress(int cluster, int entriesCount);
+
+    DirectoryEntry findDirectoryEntry(int cluster, const std::string& itemName);
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;

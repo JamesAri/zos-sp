@@ -14,13 +14,14 @@ void readFromStream(std::ifstream &f, T &data, int streamSize = sizeof(T)) {
 }
 
 void writeToStream(std::ofstream &f, std::string &stream, int streamSize) {
-    f.write(stream.c_str(), streamSize);
+    const char *charArr = &stream[0]; // we need \00 included if it's there
+    f.write(charArr, streamSize);
 }
 
 void readFromStream(std::ifstream &f, std::string &stream, int streamSize) {
     char temp[streamSize];
     f.read(temp, streamSize);
-    stream = temp;
+    stream = std::string(temp, streamSize);
 }
 
 #endif //ZOS_SP_STREAM_UTILS_H

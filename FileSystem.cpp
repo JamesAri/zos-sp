@@ -6,34 +6,31 @@
 
 DirectoryEntry::DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
-    if (mItemName.length() >= ALLOWED_ITEM_NAME_LENGTH) {
+    if (mItemName.length() >= ITEM_NAME_LENGTH) {
         throw std::runtime_error(std::string("Error: file name too long. Character limit is ") +
-                                 std::to_string(ALLOWED_ITEM_NAME_LENGTH - 1) + std::string("\n"));
+                                 std::to_string(ITEM_NAME_LENGTH - 1) + std::string("\n"));
     }
-    this->mItemName = mItemName + std::string(ALLOWED_ITEM_NAME_LENGTH - mItemName.length(), '\00');
+    this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
 DirectoryEntry::DirectoryEntry(const std::string &mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
-    if (mItemName.length() >= ALLOWED_ITEM_NAME_LENGTH) {
+    if (mItemName.length() >= ITEM_NAME_LENGTH) {
         throw std::runtime_error(std::string("Error: file name too long. Character limit is ") +
-                                 std::to_string(ALLOWED_ITEM_NAME_LENGTH - 1) + std::string("\n"));
+                                 std::to_string(ITEM_NAME_LENGTH - 1) + std::string("\n"));
     }
-    this->mItemName = mItemName + std::string(ALLOWED_ITEM_NAME_LENGTH - mItemName.length(), '\00');
+    this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
 void DirectoryEntry::write(std::ofstream &f) {
-    writeToStream(f, this->mItemName, ALLOWED_ITEM_NAME_LENGTH);
+    writeToStream(f, this->mItemName, ITEM_NAME_LENGTH);
     writeToStream(f, this->mIsFile);
     writeToStream(f, this->mSize);
     writeToStream(f, this->mStartCluster);
-    // padding
-//    std::string zeroFill(CLUSTER_SIZE - DirectoryEntry::SIZE, '\00');
-//    writeToStream(f, zeroFill, static_cast<int>(zeroFill.length()));
 }
 
 void DirectoryEntry::read(std::ifstream &f) {
-    readFromStream(f, this->mItemName, ALLOWED_ITEM_NAME_LENGTH);
+    readFromStream(f, this->mItemName, ITEM_NAME_LENGTH);
     readFromStream(f, this->mIsFile);
     readFromStream(f, this->mSize);
     readFromStream(f, this->mStartCluster);
@@ -51,7 +48,10 @@ int FAT::write(std::ofstream &f, int32_t pos) {
 }
 
 int FAT::read(std::ifstream &f, int32_t pos) {
-    return -1;
+    f.seekg(pos);
+    int32_t clusterTag;
+    readFromStream(f, clusterTag);
+    return clusterTag;
 }
 
 void FAT::wipe(std::ofstream &f, int32_t startAddress, int32_t size) {
@@ -77,7 +77,6 @@ BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
     size_t dataSize = this->mClusterCount * this->mClusterSize;
     size_t fatTablesSize = this->mFatSize * this->mFatCount;
     this->mPaddingSize = static_cast<int>(freeSpaceInBytes - (dataSize + fatTablesSize));
-//    this->mPadding = std::string(mPaddingSize, '\00');
 
     auto fatEndAddress = this->mFat2StartAddress + this->mFatSize;
     this->mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
@@ -93,7 +92,6 @@ void BootSector::write(std::ofstream &f) {
     writeToStream(f, this->mFat2StartAddress);
     writeToStream(f, this->mDataStartAddress);
     writeToStream(f, this->mPaddingSize);
-//    writeToStream(f, this->mPadding, this->mPaddingSize);
 }
 
 void BootSector::read(std::ifstream &f) {
@@ -106,7 +104,6 @@ void BootSector::read(std::ifstream &f) {
     readFromStream(f, this->mFat2StartAddress);
     readFromStream(f, this->mDataStartAddress);
     readFromStream(f, this->mPaddingSize);
-//    f.ignore(this->mPaddingSize);
 
     this->mFatSize = static_cast<int>(this->mClusterCount * sizeof(int32_t));
 }
@@ -166,7 +163,9 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 
 void FileSystem::formatFS(int size) {
     this->mBootSector = BootSector{size};
-    this->mRootDir = DirectoryEntry{std::string(ROOT_DIR_NAME), false, 0, 0};
+    this->mRootDir = DirectoryEntry{std::string("ROOT_DIR"), false, 2, 0};
+    // todo: create ., .., ?????
+
 
     std::ofstream f_out{this->mFileName, std::ios::binary | std::ios::out};
 
@@ -176,4 +175,20 @@ void FileSystem::formatFS(int size) {
     this->write(f_out, true);
     FAT::wipe(f_out, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
     FAT::wipe(f_out, this->mBootSector.mFat2StartAddress, this->mBootSector.mClusterCount);
+}
+
+int FileSystem::clusterToAddress(int cluster) {
+    return this->mBootSector.mFat1StartAddress + cluster * this->mBootSector.mClusterSize;
+}
+
+int FileSystem::getFreeDirectoryEntryAddress(int cluster, int entriesCount) {
+    if(entriesCount > MAX_ENTRIES)
+        throw std::runtime_error("entries limit reached");
+    return clusterToAddress(cluster) + entriesCount * DirectoryEntry::SIZE;
+}
+
+DirectoryEntry FileSystem::findDirectoryEntry(int cluster, const std::string& itemName) {
+    DirectoryEntry de{};
+    // todo
+    return de;
 }

@@ -28,22 +28,23 @@ bool RmCommand::validate_arguments() {
 }
 
 bool MkdirCommand::run() {
+    std::cout << this->mFS->mRootDir.mItemName.length() << std::endl; // todo znovu nacist je 8
     auto newDirectoryName = this->mAccumulator.back();
 
     for (const auto &fn: this->mAccumulator) {
 
     }
-
-    std::ofstream stream(this->mFS->mFileName, std::ios::binary);
+    std::ifstream stream(this->mFS->mFileName, std::ios::binary);
 
     if (!stream.is_open()) {
         throw std::runtime_error(FS_OPEN_ERROR);
     }
 
-    stream.seekp(0); // todo
+    auto clusterLabel = FAT::read(stream, this->mFS->mBootSector.mFat2StartAddress);
 
-    DirectoryEntry de{newDirectoryName, false, 0, 1}; // todo cluster
-    de.write(stream);
+//    stream.seekp(0); // todo
+//    DirectoryEntry de{newDirectoryName, false, 0, 1}; // todo cluster
+//    de.write(stream);
     return true;
 }
 
@@ -56,7 +57,7 @@ bool MkdirCommand::validate_arguments() {
     this->mAccumulator = split(this->mOpt1, "/");
     auto newDirectoryName = this->mAccumulator.back();
 
-    if (validateFileName(newDirectoryName))
+    if (!validateFileName(newDirectoryName))
         throw InvalidOptionException("invalid directory name");
 
     // todo check if path exists
