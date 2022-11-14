@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-DirectoryItem::DirectoryItem(std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
+DirectoryEntry::DirectoryEntry(std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
     if (mItemName.length() >= ITEM_NAME_LENGTH) {
         throw std::runtime_error(std::string("Error: file name too long. Character limit is ") +
@@ -12,24 +12,24 @@ DirectoryItem::DirectoryItem(std::string &&mItemName, bool mIsFile, int mSize, i
     this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
-void DirectoryItem::write(std::ofstream &f) {
+void DirectoryEntry::write(std::ofstream &f) {
     writeToStream(f, this->mItemName, ITEM_NAME_LENGTH);
     writeToStream(f, this->mIsFile);
     writeToStream(f, this->mSize);
     writeToStream(f, this->mStartCluster);
     // padding
-    std::string zeroFill(CLUSTER_SIZE - DirectoryItem::SIZE, '\00');
+    std::string zeroFill(CLUSTER_SIZE - DirectoryEntry::SIZE, '\00');
     writeToStream(f, zeroFill, static_cast<int>(zeroFill.length()));
 }
 
-void DirectoryItem::read(std::ifstream &f) {
+void DirectoryEntry::read(std::ifstream &f) {
     readFromStream(f, this->mItemName, ITEM_NAME_LENGTH);
     readFromStream(f, this->mIsFile);
     readFromStream(f, this->mSize);
     readFromStream(f, this->mStartCluster);
 }
 
-std::ostream &operator<<(std::ostream &os, DirectoryItem const &di) {
+std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
     return os << "  ItemName: " << di.mItemName.c_str() << "\n"
               << "  IsFile: " << di.mIsFile << "\n"
               << "  Size: " << di.mSize << "\n"
@@ -148,7 +148,7 @@ void FileSystem::formatFS(int size) {
     this->mBootSector = BootSector{size};
     this->mFat1 = FAT{};
     this->mFat2 = FAT{};
-    this->mRootDir = DirectoryItem{std::string(ROOT_DIR_NAME), false, 0, 0};
+    this->mRootDir = DirectoryEntry{std::string(ROOT_DIR_NAME), false, 0, 0};
 
     std::ofstream f_out{this->mFileName, std::ios::binary | std::ios::out};
     this->write(f_out);

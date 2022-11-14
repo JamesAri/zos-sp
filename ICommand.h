@@ -1,7 +1,7 @@
 #ifndef ZOS_SP_ICOMMAND_H
 #define ZOS_SP_ICOMMAND_H
 
-#include "Commands.h"
+#include "FileSystem.h"
 #include <utility>
 #include <vector>
 #include <iostream>
@@ -25,7 +25,7 @@ class ICommand {
 private:
     virtual bool validate_arguments() = 0;
 
-    virtual int run() = 0;
+    virtual bool run() = 0;
 
 protected:
     std::shared_ptr<FileSystem> mFS;
@@ -40,7 +40,7 @@ public:
 
     explicit ICommand(const std::vector<std::string> &options);
 
-//    ICommand &registerFS(const std::shared_ptr<FileSystem> &pFS);
+    ICommand &registerFS(const std::shared_ptr<FileSystem> &pFS);
 };
 
 

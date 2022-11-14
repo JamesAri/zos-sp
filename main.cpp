@@ -55,8 +55,7 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             LoadCommand(options).process();
             break;
         case ECommands::eFormatCommand:
-//            FormatCommand(options).registerFS(pFS).process();
-            FormatCommand(options).process();
+            FormatCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eDefragCommand:
             DefragCommand(options).process();

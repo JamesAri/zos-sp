@@ -21,16 +21,17 @@ constexpr auto ITEM_NAME_LENGTH = 11;
 constexpr auto ROOT_DIR_NAME = "/";
 
 
-class DirectoryItem {
+
+class DirectoryEntry {
 private:
     std::string mItemName;
     bool mIsFile;
-    int mSize;                   //velikost souboru, u adresáře 0 (bude zabirat jeden blok)
+    int mSize;                   //soubor: velikost, adresar: kolik ma entries
     int mStartCluster;           //počáteční cluster položky
 public:
-    DirectoryItem(){};
+    DirectoryEntry() {};
 
-    DirectoryItem(std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster);
+    DirectoryEntry(std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster);
 
     static const int SIZE = ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
 
@@ -38,8 +39,10 @@ public:
 
     void read(std::ifstream &f);
 
-    friend std::ostream &operator<<(std::ostream &os, DirectoryItem const &fs);
+    friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };
+
+constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
 
 class FAT {
 
@@ -54,6 +57,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, FAT const &fs);
 };
+
 
 class BootSector {
 private:
@@ -83,7 +87,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, BootSector const &fs);
 
-    int getClusterCount() const {return this->mClusterCount;};
+    int getClusterCount() const { return this->mClusterCount; };
 
 };
 
@@ -98,7 +102,7 @@ private:
     BootSector mBootSector;
     FAT mFat1;
     FAT mFat2;
-    DirectoryItem mRootDir;
+    DirectoryEntry mRootDir;
 
 public:
     explicit FileSystem(std::string &fileName);

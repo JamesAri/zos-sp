@@ -13,10 +13,12 @@ void ICommand::process() {
     if (!this->validate_arguments()) {
         throw InvalidOptionException("invalid option(s)");
     }
-    this->run();
+    if (this->run()) {
+        std::cout << "OK" << std::endl;
+    }
 }
 
-//ICommand &ICommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
-//    this->mFS = pFS;
-//    return *this;
-//}
+ICommand &ICommand::registerFS(const std::shared_ptr<FileSystem> &pFS) {
+    this->mFS = pFS;
+    return *this;
+}

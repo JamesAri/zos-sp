@@ -61,7 +61,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -81,7 +81,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -101,7 +101,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -121,7 +121,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -141,7 +141,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -162,7 +162,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -181,7 +181,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -200,7 +200,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -218,7 +218,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -237,7 +237,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -257,7 +257,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -277,7 +277,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -297,7 +297,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -318,7 +318,7 @@ public:
 private:
 
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 /**
@@ -336,7 +336,7 @@ public:
 
 private:
     bool validate_arguments() override;
-    int run() override;
+    bool run() override;
 };
 
 

@@ -1,120 +1,125 @@
 #include "Commands.h"
 #include "utils/string-utils.h"
+#include "utils/validators.h"
 #include <algorithm>
 
-int CpCommand::run() {
-    return 0;
+bool CpCommand::run() {
+    return true;
 }
 
 bool CpCommand::validate_arguments() {
     return this->mOptCount == 2;
 }
 
-int MvCommand::run() {
-    return 0;
+bool MvCommand::run() {
+    return true;
 }
 
 bool MvCommand::validate_arguments() {
     return this->mOptCount == 2;
 }
 
-int RmCommand::run() {
-    return 0;
+bool RmCommand::run() {
+    return true;
 }
 
 bool RmCommand::validate_arguments() {
     return this->mOptCount == 2;
 }
 
-int MkdirCommand::run() {
-    return 0;
+bool MkdirCommand::run() {
+    return true;
 }
 
 bool MkdirCommand::validate_arguments() {
-    return this->mOptCount == 1;
+    if(this->mOptCount != 1) return false;
+    if(!validateFilePath(this->mOpt1)) {
+        throw InvalidOptionException("invalid directory name");
+    }
+    // todo check if exists
+    return true;
 }
 
-int RmdirCommand::run() {
-    return 0;
+bool RmdirCommand::run() {
+    return true;
 }
 
 bool RmdirCommand::validate_arguments() {
     return this->mOptCount == 1;
 }
 
-int LsCommand::run() {
-    return 0;
+bool LsCommand::run() {
+    return true;
 }
 
 bool LsCommand::validate_arguments() {
     return this->mOptCount == 0 || this->mOptCount == 1;
 }
 
-int CatCommand::run() {
-    return 0;
+bool CatCommand::run() {
+    return true;
 }
 
 bool CatCommand::validate_arguments() {
     return this->mOptCount == 1;
 }
 
-int CdCommand::run() {
-    return 0;
+bool CdCommand::run() {
+    return true;
 }
 
 bool CdCommand::validate_arguments() {
     return this->mOptCount == 1;
 }
 
-int PwdCommand::run() {
-    return 0;
+bool PwdCommand::run() {
+    return true;
 }
 
 bool PwdCommand::validate_arguments() {
     return this->mOptCount == 0;
 }
 
-int InfoCommand::run() {
-    return 0;
+bool InfoCommand::run() {
+    return true;
 }
 
 bool InfoCommand::validate_arguments() {
     return this->mOptCount == 1;
 }
 
-int IncpCommand::run() {
-    return 0;
+bool IncpCommand::run() {
+    return true;
 }
 
 bool IncpCommand::validate_arguments() {
     return this->mOptCount == 2;
 }
 
-int OutcpCommand::run() {
-    return 0;
+bool OutcpCommand::run() {
+    return true;
 }
 
 bool OutcpCommand::validate_arguments() {
     return this->mOptCount == 2;
 }
 
-int LoadCommand::run() {
-    return 0;
+bool LoadCommand::run() {
+    return true;
 }
 
 bool LoadCommand::validate_arguments() {
     return this->mOptCount == 1;
 }
 
-int FormatCommand::run() {
+bool FormatCommand::run() {
     try {
         this->mFS->formatFS(std::stoi(this->mOpt1));
-        std::cout << "OK" << std::endl;
     } catch (...) {
-        std::cerr << "Internal error, terminating" << std::endl;
+        std::cerr << "internal error, terminating" << std::endl;
         exit(1);
     }
-    return 0;
+    return true;
 }
 
 bool FormatCommand::validate_arguments() {
@@ -142,8 +147,8 @@ bool FormatCommand::validate_arguments() {
 //    return *this;
 //}
 
-int DefragCommand::run() {
-    return 0;
+bool DefragCommand::run() {
+    return true;
 }
 
 bool DefragCommand::validate_arguments() {
