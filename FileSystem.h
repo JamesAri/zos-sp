@@ -60,11 +60,11 @@ public:
     int mFat2StartAddress;
     int mDataStartAddress;     //adresa pocatku datovych bloku (hl. adresar)
     int mPaddingSize;
-    std::string mPadding;
+//    std::string mPadding;
 
     static const int SIZE = SIGNATURE_LENGTH + sizeof(mClusterSize) + sizeof(mClusterCount) +
                             sizeof(mDiskSize) + sizeof(mFatCount) + sizeof(mFat1StartAddress) +
-                            sizeof(mFat2StartAddress) + sizeof(mDataStartAddress);
+                            sizeof(mFat2StartAddress) + sizeof(mDataStartAddress) + sizeof(mPaddingSize);
 
     BootSector() {};
 

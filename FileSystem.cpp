@@ -28,8 +28,8 @@ void DirectoryEntry::write(std::ofstream &f) {
     writeToStream(f, this->mSize);
     writeToStream(f, this->mStartCluster);
     // padding
-    std::string zeroFill(CLUSTER_SIZE - DirectoryEntry::SIZE, '\00');
-    writeToStream(f, zeroFill, static_cast<int>(zeroFill.length()));
+//    std::string zeroFill(CLUSTER_SIZE - DirectoryEntry::SIZE, '\00');
+//    writeToStream(f, zeroFill, static_cast<int>(zeroFill.length()));
 }
 
 void DirectoryEntry::read(std::ifstream &f) {
@@ -77,7 +77,7 @@ BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
     size_t dataSize = this->mClusterCount * this->mClusterSize;
     size_t fatTablesSize = this->mFatSize * this->mFatCount;
     this->mPaddingSize = static_cast<int>(freeSpaceInBytes - (dataSize + fatTablesSize));
-    this->mPadding = std::string(mPaddingSize, '\00');
+//    this->mPadding = std::string(mPaddingSize, '\00');
 
     auto fatEndAddress = this->mFat2StartAddress + this->mFatSize;
     this->mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
@@ -93,7 +93,7 @@ void BootSector::write(std::ofstream &f) {
     writeToStream(f, this->mFat2StartAddress);
     writeToStream(f, this->mDataStartAddress);
     writeToStream(f, this->mPaddingSize);
-    writeToStream(f, this->mPadding, this->mPaddingSize);
+//    writeToStream(f, this->mPadding, this->mPaddingSize);
 }
 
 void BootSector::read(std::ifstream &f) {
@@ -106,7 +106,7 @@ void BootSector::read(std::ifstream &f) {
     readFromStream(f, this->mFat2StartAddress);
     readFromStream(f, this->mDataStartAddress);
     readFromStream(f, this->mPaddingSize);
-    f.ignore(this->mPaddingSize);
+//    f.ignore(this->mPaddingSize);
 
     this->mFatSize = static_cast<int>(this->mClusterCount * sizeof(int32_t));
 }
@@ -151,6 +151,7 @@ void FileSystem::write(std::ofstream &f, bool wipeData) {
 
 void FileSystem::read(std::ifstream &f) {
     this->mBootSector.read(f);
+    f.seekg(this->mBootSector.mDataStartAddress);
     this->mRootDir.read(f);
 }
 
