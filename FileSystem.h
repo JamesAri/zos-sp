@@ -5,6 +5,12 @@
 #include <string>
 #include <fstream>
 
+// BOOT SECTOR
+// FAT1
+// FAT2
+// padding (0 >= padding > CLUSTER_SIZE) - zeros \00
+// DATA
+
 class DirectoryEntry {
 private:
     std::string mItemName;
@@ -48,10 +54,10 @@ public:
     std::string mSignature;
     int mClusterSize;
     int mClusterCount;
-    int mDiskSize;             //celkova velikost VFS
-    int mFatCount;             //pocet polozek kazde FAT tabulce
-    int mFat1StartAddress;     //adresa pocatku FAT1 tabulky
-    int mFat2StartAddress;     //adresa pocatku FAT2 tabulky
+    int mDiskSize;
+    int mFatCount;
+    int mFat1StartAddress;
+    int mFat2StartAddress;
     int mDataStartAddress;     //adresa pocatku datovych bloku (hl. adresar)
     int mPaddingSize;
     std::string mPadding;
@@ -71,7 +77,6 @@ public:
     friend std::ostream &operator<<(std::ostream &os, BootSector const &fs);
 
     int getFatSize() const { return this->mFatSize; };
-
 };
 
 

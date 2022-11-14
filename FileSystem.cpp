@@ -57,7 +57,7 @@ int FAT::read(std::ifstream &f, int32_t pos) {
 void FAT::wipe(std::ofstream &f, int32_t startAddress, int32_t size) {
     f.seekp(startAddress);
 
-    auto wipeUnit = reinterpret_cast<char *>(FAT_UNUSED);
+    auto wipeUnit = reinterpret_cast<const char *>(&FAT_UNUSED);
     for (int i = 0; i < size; i++) {
         f.write(wipeUnit, sizeof(FAT_UNUSED));
     }
@@ -69,7 +69,7 @@ BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
     this->mFatCount = FAT_COUNT;
 
     size_t freeSpaceInBytes = this->mDiskSize - BootSector::SIZE;
-    this->mClusterCount = static_cast<int>(freeSpaceInBytes / (sizeof(int32_t) + CLUSTER_SIZE));
+    this->mClusterCount = static_cast<int>(freeSpaceInBytes / (sizeof(int32_t) + this->mClusterSize));
     this->mFatSize = static_cast<int>(this->mClusterCount * sizeof(int32_t));
     this->mFat1StartAddress = BootSector::SIZE;
     this->mFat2StartAddress = BootSector::SIZE + this->mFatSize;
@@ -81,8 +81,6 @@ BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
 
     auto fatEndAddress = this->mFat2StartAddress + this->mFatSize;
     this->mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
-
-
 }
 
 void BootSector::write(std::ofstream &f) {
@@ -115,10 +113,11 @@ void BootSector::read(std::ifstream &f) {
 
 std::ostream &operator<<(std::ostream &os, BootSector const &bs) {
     return os << "  Signature: " << bs.mSignature.c_str() << "\n"
-              << "  ClusterSize: " << bs.mClusterSize << "\n"
+              << "  ClusterSize: " << bs.mClusterSize << "B\n"
               << "  ClusterCount: " << bs.mClusterCount << "\n"
-              << "  DiskSize: " << bs.mDiskSize / FORMAT_UNIT << "MB" << "\n"
+              << "  DiskSize: " << bs.mDiskSize / FORMAT_UNIT << "MB\n"
               << "  FatCount: " << bs.mFatCount << "\n"
+              << "  Padding: " << bs.mPaddingSize << "B\n"
               << "  Fat1StartAddress: " << bs.mFat1StartAddress << "\n"
               << "  Fat2StartAddress: " << bs.mFat2StartAddress << "\n"
               << "  DataStartAddress: " << bs.mDataStartAddress << "\n";
@@ -157,9 +156,9 @@ void FileSystem::read(std::ifstream &f) {
 
 std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
     return os << "==========    FILE SYSTEM SPECS    ========== \n\n"
-              << "BOOT-SECTOR\n" << fs.mBootSector << "\n"
-              << "FAT count:\n" << fs.mBootSector.mFatCount << "\n"
-              << "FAT size:\n" << fs.mBootSector.getFatSize() << "\n"
+              << "BOOT-SECTOR (" << BootSector::SIZE << "B)\n" << fs.mBootSector << "\n"
+              << "FAT count: " << fs.mBootSector.mFatCount << "\n"
+              << "FAT size: " << fs.mBootSector.getFatSize() << "\n\n"
               << "ROOT-DIR:\n" << fs.mRootDir << "\n"
               << "========== END OF FILE SYSTEM SPECS ========== \n";
 }
