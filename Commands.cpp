@@ -28,7 +28,6 @@ bool RmCommand::validate_arguments() {
 }
 
 bool MkdirCommand::run() {
-    std::cout << this->mFS->mRootDir.mItemName.length() << std::endl; // todo znovu nacist je 8
     auto newDirectoryName = this->mAccumulator.back();
 
     for (const auto &fn: this->mAccumulator) {
