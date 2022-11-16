@@ -194,8 +194,10 @@ int FileSystem::clusterToAddress(int cluster) const {
 
 
 int FileSystem::getFreeDirectoryEntryAddress(int cluster, int entriesCount) const {
-    if (entriesCount > MAX_ENTRIES || entriesCount < 0)
+    if (entriesCount > MAX_ENTRIES)
         throw std::runtime_error("entries limit reached");
+    if (entriesCount < 2)
+        throw std::runtime_error("internal error, directory missing references");
     return clusterToAddress(cluster) + entriesCount * DirectoryEntry::SIZE;
 }
 

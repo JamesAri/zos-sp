@@ -106,7 +106,7 @@ public:
     /**
      * @param entriesCount '.', '..', included (should correspond to memory structure).
      */
-    inline int getFreeDirectoryEntryAddress(int cluster, int entriesCount) const;
+    int getFreeDirectoryEntryAddress(int cluster, int entriesCount) const;
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
 };
