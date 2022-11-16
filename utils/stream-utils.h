@@ -2,6 +2,7 @@
 #define ZOS_SP_STREAM_UTILS_H
 
 #include <fstream>
+#include <algorithm>
 
 template<typename T>
 void writeToStream(std::ostream &f, T &data, int streamSize = sizeof(T)) {
@@ -14,8 +15,9 @@ void readFromStream(std::istream &f, T &data, int streamSize = sizeof(T)) {
 }
 
 void writeToStream(std::ostream &f, std::string &stream, int streamSize) {
-    const char *charArr = &stream[0]; // we need \00 included if it's there
-    f.write(charArr, streamSize);
+    auto str = stream + std::string(streamSize - stream.length(), '\00');
+    const char *charArr = &stream[0]; // we need \00 included
+    f.write(str.c_str(), streamSize);
 }
 
 void readFromStream(std::istream &f, std::string &stream, int streamSize) {

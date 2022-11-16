@@ -49,13 +49,12 @@ public:
     int mDiskSize;
     int mFatCount;
     int mFat1StartAddress;
-    int mFat2StartAddress;
     int mDataStartAddress;     //adresa pocatku datovych bloku (hl. adresar)
     int mPaddingSize;
 
     static const int SIZE = SIGNATURE_LENGTH + sizeof(mClusterSize) + sizeof(mClusterCount) +
                             sizeof(mDiskSize) + sizeof(mFatCount) + sizeof(mFat1StartAddress) +
-                            sizeof(mFat2StartAddress) + sizeof(mDataStartAddress) + sizeof(mPaddingSize);
+                            sizeof(mDataStartAddress) + sizeof(mPaddingSize);
 
     BootSector() {};
 
@@ -97,7 +96,7 @@ public:
     const std::string mFileName;
 
     BootSector mBootSector;
-    DirectoryEntry mRootDir;
+    DirectoryEntry mWorkingDirectory;
 
     explicit FileSystem(std::string &fileName);
 
@@ -116,7 +115,7 @@ public:
     /**
      * @param entriesCount '.', '..', included (should correspond to memory structure).
      */
-    int getFreeDirectoryEntryAddress(int cluster, int entriesCount) const;
+    int getDirectoryNextFreeEntryAddress(int cluster, int entriesCount) const;
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
 };

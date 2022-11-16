@@ -30,47 +30,59 @@ bool RmCommand::validate_arguments() {
 }
 
 bool MkdirCommand::run() {
+    if (this->mAccumulator.empty()) {
+        throw std::runtime_error("internal error, received empty path accumulator");
+    }
+
     auto newDirectoryName = this->mAccumulator.back();
 
-    int curCluster = 0; // root
-    DirectoryEntry de{};
-    for (auto it{this->mAccumulator.begin()} ; it != std::prev(this->mAccumulator.end()) ; it++) {
-        if (this->mFS->findDirectoryEntry(curCluster, *it, de)) {
-            curCluster = de.mStartCluster;
-        } else {
-            throw InvalidOptionException("PATH NOT FOUND");
+    DirectoryEntry de = this->mFS->mWorkingDirectory;
+
+    if (this->mAccumulator.size() > 1) {
+        // Iterates over all directory entries (itemNames) in accumulator except the last entry, which is
+        // directory to create. If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
+        int curCluster = de.mStartCluster;
+        for (auto it{this->mAccumulator.begin()}; it != std::prev(this->mAccumulator.end()); it++) {
+            if (this->mFS->findDirectoryEntry(curCluster, *it, de)) {
+                curCluster = de.mStartCluster;
+            } else {
+                throw InvalidOptionException("PATH NOT FOUND");
+            }
         }
     }
 
-    if (this->mFS->findDirectoryEntry(curCluster, newDirectoryName, de)) {
+    if (this->mFS->findDirectoryEntry(de.mStartCluster, newDirectoryName, de)) {
         throw InvalidOptionException("EXIST");
     }
 
-    std::fstream stream(this->mFS->mFileName, std::ios::in | std::ios::out |std::ios::binary);
+    std::fstream stream(this->mFS->mFileName, std::ios::in | std::ios::out | std::ios::binary);
 
     if (!stream.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
 
     int32_t newFreeCluster = FAT::getFreeCluster(stream, this->mFS->mBootSector);
-    DirectoryEntry newDirectoryEntry{newDirectoryName, true, 2, newFreeCluster};
+    DirectoryEntry newDirectoryEntry{newDirectoryName, false, DEFAULT_DIR_SIZE, newFreeCluster};
 
-    int32_t freeDirEntryAddrOffset = this->mFS->getFreeDirectoryEntryAddress(de.mStartCluster, de.mSize);
+    int32_t freeDirEntryAddrOffset = this->mFS->getDirectoryNextFreeEntryAddress(de.mStartCluster, de.mSize);
     stream.seekp(freeDirEntryAddrOffset);
     newDirectoryEntry.write(stream);
 
-    int32_t localRootAddress = this->mFS->clusterToAddress(de.mStartCluster);
+    int32_t localDirectoryAddress = this->mFS->clusterToAddress(de.mStartCluster);
     de.mSize++;
-    stream.seekp(localRootAddress);
+    // update state in loaded memory if necessary
+    if (this->mAccumulator.size() == 1) this->mFS->mWorkingDirectory.mSize++;
+    stream.seekp(localDirectoryAddress);
     de.write(stream);
 
-    FAT::write(stream, this->mFS->clusterToFatAddress(newFreeCluster), FAT_FILE_END);
 
-    int32_t newDirAddress = this->mFS->clusterToAddress(newFreeCluster);
-    stream.seekp(newDirAddress);
+    int32_t newDirectoryAddress = this->mFS->clusterToAddress(newFreeCluster);
+    stream.seekp(newDirectoryAddress);
     newDirectoryEntry.mItemName = ".";
     newDirectoryEntry.write(stream);
     de.mItemName = "..";
     de.write(stream);
+
+    FAT::write(stream, this->mFS->clusterToFatAddress(newFreeCluster), FAT_FILE_END); // all went ok, label cluster
     return true;
 }
 

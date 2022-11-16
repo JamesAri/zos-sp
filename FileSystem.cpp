@@ -103,13 +103,12 @@ BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
     this->mClusterCount = static_cast<int>(freeSpaceInBytes / (sizeof(int32_t) + this->mClusterSize));
     this->mFatSize = static_cast<int>(this->mClusterCount * sizeof(int32_t));
     this->mFat1StartAddress = BootSector::SIZE;
-    this->mFat2StartAddress = BootSector::SIZE + this->mFatSize;
 
     size_t dataSize = this->mClusterCount * this->mClusterSize;
     size_t fatTablesSize = this->mFatSize * this->mFatCount;
     this->mPaddingSize = static_cast<int>(freeSpaceInBytes - (dataSize + fatTablesSize));
 
-    auto fatEndAddress = this->mFat2StartAddress + this->mFatSize;
+    auto fatEndAddress = this->mFat1StartAddress + this->mFatSize;
     this->mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
 }
 
@@ -120,7 +119,6 @@ void BootSector::write(std::ofstream &f) {
     writeToStream(f, this->mDiskSize);
     writeToStream(f, this->mFatCount);
     writeToStream(f, this->mFat1StartAddress);
-    writeToStream(f, this->mFat2StartAddress);
     writeToStream(f, this->mDataStartAddress);
     writeToStream(f, this->mPaddingSize);
 }
@@ -132,7 +130,6 @@ void BootSector::read(std::ifstream &f) {
     readFromStream(f, this->mDiskSize);
     readFromStream(f, this->mFatCount);
     readFromStream(f, this->mFat1StartAddress);
-    readFromStream(f, this->mFat2StartAddress);
     readFromStream(f, this->mDataStartAddress);
     readFromStream(f, this->mPaddingSize);
 
@@ -146,9 +143,8 @@ std::ostream &operator<<(std::ostream &os, BootSector const &bs) {
               << "  DiskSize: " << bs.mDiskSize / FORMAT_UNIT << "MB\n"
               << "  FatCount: " << bs.mFatCount << "\n"
               << "  Fat1StartAddress: " << bs.mFat1StartAddress << "-" << bs.mFat1StartAddress + bs.mFatSize << "\n"
-              << "  Fat2StartAddress: " << bs.mFat2StartAddress << "-" << bs.mFat2StartAddress + bs.mFatSize << "\n"
               << "  Padding size: " << bs.mPaddingSize << "B\n"
-              << "  PaddingAddress: " << bs.mFat2StartAddress + bs.mFatSize << "-" << bs.mDataStartAddress - 1 << "\n"
+              << "  PaddingAddress: " << bs.mFat1StartAddress + bs.mFatSize << "-" << bs.mDataStartAddress << "\n"
               << "  DataStartAddress: " << bs.mDataStartAddress << "\n";
 }
 
@@ -176,6 +172,7 @@ void FileSystem::write(std::ofstream &f, bool wipeData) {
         DirectoryEntry rootDir2{std::string(".."), false, DEFAULT_DIR_SIZE, 0};
         rootDir.write(f);
         rootDir2.write(f);
+        this->mWorkingDirectory = rootDir;
 
         // wipe each cluster
         char wipedCluster[CLUSTER_SIZE] = {'\00'};
@@ -188,7 +185,7 @@ void FileSystem::write(std::ofstream &f, bool wipeData) {
 void FileSystem::read(std::ifstream &f) {
     this->mBootSector.read(f);
     f.seekg(this->mBootSector.mDataStartAddress);
-    this->mRootDir.read(f);
+    this->mWorkingDirectory.read(f);
 }
 
 std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
@@ -196,7 +193,7 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
               << "BOOT-SECTOR (" << BootSector::SIZE << "B)\n" << fs.mBootSector << "\n"
               << "FAT count: " << fs.mBootSector.mFatCount << "\n"
               << "FAT size: " << fs.mBootSector.getFatSize() << "\n\n"
-              << "ROOT-DIR:\n" << fs.mRootDir << "\n"
+              << "PWD (root dir):\n" << fs.mWorkingDirectory << "\n"
               << "========== END OF FILE SYSTEM SPECS ========== \n";
 }
 
@@ -213,7 +210,9 @@ void FileSystem::formatFS(int size) {
 
     // wipe fat tables
     FAT::wipe(f_out, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
-    FAT::wipe(f_out, this->mBootSector.mFat2StartAddress, this->mBootSector.mClusterCount);
+
+    // label root directory
+    FAT::write(f_out, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
 }
 
 int FileSystem::clusterToAddress(int cluster) const {
@@ -225,7 +224,7 @@ int FileSystem::clusterToFatAddress(int cluster) const {
 }
 
 
-int FileSystem::getFreeDirectoryEntryAddress(int cluster, int entriesCount) const {
+int FileSystem::getDirectoryNextFreeEntryAddress(int cluster, int entriesCount) const {
     if (entriesCount > MAX_ENTRIES)
         throw std::runtime_error("entries limit reached");
     if (entriesCount < 2)
@@ -233,6 +232,10 @@ int FileSystem::getFreeDirectoryEntryAddress(int cluster, int entriesCount) cons
     return clusterToAddress(cluster) + entriesCount * DirectoryEntry::SIZE;
 }
 
+/**
+ * @param de Mutates DirectoryEntry only if entry is found, in which case it
+ * copies the found data into passed object.
+ */
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
     auto address = this->clusterToAddress(cluster);
 

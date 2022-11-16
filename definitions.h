@@ -14,7 +14,7 @@ constexpr auto SIGNATURE_LENGTH = 10; // with EOF
 constexpr auto DEFAULT_FORMAT_SIZE = 1; // MB
 constexpr auto FORMAT_UNIT = 1'000'000; // MB -> B
 
-constexpr auto FAT_COUNT = 2;
+constexpr auto FAT_COUNT = 1;
 constexpr auto CLUSTER_SIZE = 512 * 8;
 
 constexpr auto ITEM_NAME_LENGTH = 12; // with EOF
