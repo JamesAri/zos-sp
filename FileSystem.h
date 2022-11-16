@@ -31,8 +31,6 @@ public:
 
     void read(std::ifstream &f);
 
-    // todo: static read, write like in FAT
-
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };
 
@@ -106,7 +104,7 @@ public:
 
     inline int getFreeDirectoryEntryAddress(int cluster, int entriesCount);
 
-    DirectoryEntry findDirectoryEntry(int cluster, const std::string& itemName);
+    bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;

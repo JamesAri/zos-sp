@@ -181,14 +181,28 @@ int FileSystem::clusterToAddress(int cluster) {
     return this->mBootSector.mFat1StartAddress + cluster * this->mBootSector.mClusterSize;
 }
 
+
 int FileSystem::getFreeDirectoryEntryAddress(int cluster, int entriesCount) {
-    if(entriesCount > MAX_ENTRIES)
+    if (entriesCount > MAX_ENTRIES || entriesCount < 0)
         throw std::runtime_error("entries limit reached");
     return clusterToAddress(cluster) + entriesCount * DirectoryEntry::SIZE;
 }
 
-DirectoryEntry FileSystem::findDirectoryEntry(int cluster, const std::string& itemName) {
-    DirectoryEntry de{};
-    // todo
-    return de;
+bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
+    auto address = this->clusterToAddress(cluster);
+
+    DirectoryEntry clusterDirectory{};
+    std::ifstream stream(this->mFileName, std::ios::binary);
+    stream.seekg(address);
+    clusterDirectory.read(stream);
+    auto entriesCount = clusterDirectory.mSize;
+
+    if (entriesCount > MAX_ENTRIES || entriesCount < 0)
+        throw std::runtime_error("internal error, file system is corrupted");
+
+    for (int i = 1; i < entriesCount; i++) { // i = 1, we've already read the '.' entry.
+        de.read(stream);
+        if (de.mItemName == itemName) return true;
+    }
+    return false;
 }
