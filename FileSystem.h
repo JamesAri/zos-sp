@@ -27,24 +27,11 @@ public:
 
     static const int SIZE = ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
 
-    void write(std::ofstream &f);
+    void write(std::ostream &f);
 
     void read(std::ifstream &f);
 
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
-};
-
-
-class FAT {
-private:
-    FAT() {/* static class */}
-
-public:
-    static int write(std::ofstream &f, int32_t pos);
-
-    static int read(std::ifstream &f, int32_t pos);
-
-    static void wipe(std::ofstream &f, int32_t startAddress, int32_t size);
 };
 
 
@@ -79,6 +66,20 @@ public:
     int getFatSize() const { return this->mFatSize; };
 };
 
+
+class FAT {
+private:
+    FAT() {/* static class */}
+
+public:
+    static int write(std::ofstream &f, int32_t pos, int32_t label);
+
+    static int read(std::ifstream &f, int32_t pos);
+
+    static void wipe(std::ofstream &f, int32_t startAddress, int32_t size);
+
+    static int getFreeCluster(std::istream &f, const BootSector &bs);
+};
 
 /**
  * FAT FS

@@ -42,20 +42,24 @@ bool MkdirCommand::run() {
         }
     }
 
-    this->mFS->findDirectoryEntry(curCluster, newDirectoryName, de);
-
-    std::ofstream stream(this->mFS->mFileName, std::ios::binary);
-
-    if (!stream.is_open()) {
-        throw std::runtime_error(FS_OPEN_ERROR);
+    if (this->mFS->findDirectoryEntry(curCluster, newDirectoryName, de)) {
+        throw InvalidOptionException("EXIST");
     }
 
+    std::fstream stream(this->mFS->mFileName, std::ios::in | std::ios::out |std::ios::binary);
 
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
 
-//    auto clusterLabel = FAT::read(stream, this->mFS->mBootSector.mFat2StartAddress);
-//    stream.seekp(0); // todo
-//    DirectoryEntry de{newDirectoryName, false, 0, 1}; // todo cluster
-//    de.write(stream);
+    int32_t freeAddress = this->mFS->getFreeDirectoryEntryAddress(de.mStartCluster, de.mSize);
+
+    int32_t freeCluster = FAT::getFreeCluster(stream, this->mFS->mBootSector);
+    DirectoryEntry newDirectoryEntry{newDirectoryName, true, 2, freeCluster};
+    stream.seekp(freeAddress);
+    newDirectoryEntry.write(stream);
+
+    // todo zapsat na freeCluster, ze je used
+    // todo do freeCluster data sekce zapsat newEntry s nazvem '.'
     return true;
 }
 

@@ -22,7 +22,7 @@ DirectoryEntry::DirectoryEntry(const std::string &mItemName, bool mIsFile, int m
     this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
-void DirectoryEntry::write(std::ofstream &f) {
+void DirectoryEntry::write(std::ostream &f) {
     writeToStream(f, this->mItemName, ITEM_NAME_LENGTH);
     writeToStream(f, this->mIsFile);
     writeToStream(f, this->mSize);
@@ -43,7 +43,7 @@ std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
               << "  StartCluster: " << di.mStartCluster << "\n";
 }
 
-int FAT::write(std::ofstream &f, int32_t pos) {
+int FAT::write(std::ofstream &f, int32_t pos, int32_t label) {
     return -1;
 }
 
@@ -62,6 +62,17 @@ void FAT::wipe(std::ofstream &f, int32_t startAddress, int32_t size) {
         f.write(wipeUnit, sizeof(FAT_UNUSED));
     }
 }
+
+int FAT::getFreeCluster(std::istream &f, const BootSector &bs) {
+    f.seekg(bs.mFat1StartAddress);
+    int32_t label;
+    for (int32_t i = 0; i < bs.mClusterCount; i++) {
+        readFromStream(f, label);
+        if(label == FAT_UNUSED) return i;
+    }
+    return -1;
+}
+
 
 BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
     this->mSignature = SIGNATURE;
@@ -204,7 +215,7 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
     for (int i = 1; i < entriesCount; i++) { // i = 1, we've already read the '.' entry.
         temp.read(stream);
         if (temp.mItemName == itemName) {
-            de = temp;
+            de = std::move(temp);
             return true;
         }
     }
