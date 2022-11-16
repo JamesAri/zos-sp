@@ -37,7 +37,7 @@ public:
 
 class FAT {
 private:
-    FAT(){/* static class */}
+    FAT() {/* static class */}
 
 public:
     static int write(std::ofstream &f, int32_t pos);
@@ -100,12 +100,12 @@ public:
 
     void formatFS(int size = DEFAULT_FORMAT_SIZE);
 
-    inline int clusterToAddress(int cluster);
+    inline int clusterToAddress(int cluster) const;
 
     /**
      * @param entriesCount '.', '..', included (should correspond to memory structure).
      */
-    inline int getFreeDirectoryEntryAddress(int cluster, int entriesCount);
+    inline int getFreeDirectoryEntryAddress(int cluster, int entriesCount) const;
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
 };

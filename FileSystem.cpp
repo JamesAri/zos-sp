@@ -177,12 +177,12 @@ void FileSystem::formatFS(int size) {
     FAT::wipe(f_out, this->mBootSector.mFat2StartAddress, this->mBootSector.mClusterCount);
 }
 
-int FileSystem::clusterToAddress(int cluster) {
+int FileSystem::clusterToAddress(int cluster) const {
     return this->mBootSector.mFat1StartAddress + cluster * this->mBootSector.mClusterSize;
 }
 
 
-int FileSystem::getFreeDirectoryEntryAddress(int cluster, int entriesCount) {
+int FileSystem::getFreeDirectoryEntryAddress(int cluster, int entriesCount) const {
     if (entriesCount > MAX_ENTRIES || entriesCount < 0)
         throw std::runtime_error("entries limit reached");
     return clusterToAddress(cluster) + entriesCount * DirectoryEntry::SIZE;
@@ -200,9 +200,13 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
     if (entriesCount > MAX_ENTRIES || entriesCount < 0)
         throw std::runtime_error("internal error, file system is corrupted");
 
+    DirectoryEntry temp{};
     for (int i = 1; i < entriesCount; i++) { // i = 1, we've already read the '.' entry.
-        de.read(stream);
-        if (de.mItemName == itemName) return true;
+        temp.read(stream);
+        if (temp.mItemName == itemName) {
+            de = temp;
+            return true;
+        }
     }
     return false;
 }

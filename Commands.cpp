@@ -1,7 +1,9 @@
 #include "Commands.h"
 #include "utils/string-utils.h"
 #include "utils/validators.h"
+
 #include <algorithm>
+
 
 bool CpCommand::run() {
     return true;
@@ -30,17 +32,27 @@ bool RmCommand::validate_arguments() {
 bool MkdirCommand::run() {
     auto newDirectoryName = this->mAccumulator.back();
 
-    for (const auto &fn: this->mAccumulator) {
-
+    int curCluster = 0; // root
+    DirectoryEntry de{};
+    for (auto it{this->mAccumulator.begin()} ; it != std::prev(this->mAccumulator.end()) ; it++) {
+        if (this->mFS->findDirectoryEntry(curCluster, *it, de)) {
+            curCluster = de.mStartCluster;
+        } else {
+            throw InvalidOptionException("PATH NOT FOUND");
+        }
     }
-    std::ifstream stream(this->mFS->mFileName, std::ios::binary);
+
+    this->mFS->findDirectoryEntry(curCluster, newDirectoryName, de);
+
+    std::ofstream stream(this->mFS->mFileName, std::ios::binary);
 
     if (!stream.is_open()) {
         throw std::runtime_error(FS_OPEN_ERROR);
     }
 
-    auto clusterLabel = FAT::read(stream, this->mFS->mBootSector.mFat2StartAddress);
 
+
+//    auto clusterLabel = FAT::read(stream, this->mFS->mBootSector.mFat2StartAddress);
 //    stream.seekp(0); // todo
 //    DirectoryEntry de{newDirectoryName, false, 0, 1}; // todo cluster
 //    de.write(stream);
