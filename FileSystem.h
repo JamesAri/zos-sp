@@ -72,11 +72,11 @@ private:
     FAT() {/* static class */}
 
 public:
-    static int write(std::ofstream &f, int32_t pos, int32_t label);
+    static int write(std::ostream &f, int32_t pos, int32_t label);
 
-    static int read(std::ifstream &f, int32_t pos);
+    static int read(std::istream &f, int32_t pos);
 
-    static void wipe(std::ofstream &f, int32_t startAddress, int32_t size);
+    static void wipe(std::ostream &f, int32_t startAddress, int32_t size);
 
     static int getFreeCluster(std::istream &f, const BootSector &bs);
 };
@@ -101,7 +101,9 @@ public:
 
     void formatFS(int size = DEFAULT_FORMAT_SIZE);
 
-    inline int clusterToAddress(int cluster) const;
+    int clusterToAddress(int cluster) const;
+
+    int clusterToFatAddress(int cluster) const;
 
     /**
      * @param entriesCount '.', '..', included (should correspond to memory structure).

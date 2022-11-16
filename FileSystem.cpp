@@ -43,18 +43,18 @@ std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
               << "  StartCluster: " << di.mStartCluster << "\n";
 }
 
-int FAT::write(std::ofstream &f, int32_t pos, int32_t label) {
+int FAT::write(std::ostream &f, int32_t pos, int32_t label) {
     return -1;
 }
 
-int FAT::read(std::ifstream &f, int32_t pos) {
+int FAT::read(std::istream &f, int32_t pos) {
     f.seekg(pos);
     int32_t clusterTag;
     readFromStream(f, clusterTag);
     return clusterTag;
 }
 
-void FAT::wipe(std::ofstream &f, int32_t startAddress, int32_t size) {
+void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t size) {
     f.seekp(startAddress);
 
     auto wipeUnit = reinterpret_cast<const char *>(&FAT_UNUSED);
@@ -189,7 +189,11 @@ void FileSystem::formatFS(int size) {
 }
 
 int FileSystem::clusterToAddress(int cluster) const {
-    return this->mBootSector.mFat1StartAddress + cluster * this->mBootSector.mClusterSize;
+    return this->mBootSector.mDataStartAddress + cluster * this->mBootSector.mClusterSize;
+}
+
+int FileSystem::clusterToFatAddress(int cluster) const {
+    return this->mBootSector.mFat1StartAddress + cluster * sizeof(int32_t);
 }
 
 

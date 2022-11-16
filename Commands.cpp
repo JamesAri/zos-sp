@@ -51,16 +51,24 @@ bool MkdirCommand::run() {
     if (!stream.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
 
-
     int32_t freeCluster = FAT::getFreeCluster(stream, this->mFS->mBootSector);
     DirectoryEntry newDirectoryEntry{newDirectoryName, true, 2, freeCluster};
-    int32_t freeAddress = this->mFS->getFreeDirectoryEntryAddress(de.mStartCluster, de.mSize);
-    stream.seekp(freeAddress);
+    int32_t freeDirEntryAddrOffset = this->mFS->getFreeDirectoryEntryAddress(de.mStartCluster, de.mSize);
+    stream.seekp(freeDirEntryAddrOffset);
     newDirectoryEntry.write(stream);
 
-    // todo zapsat na freeCluster, ze je used
-    // todo do freeCluster data sekce zapsat newEntry s nazvem '.'
-    // todo do freeCluster data sekce zapsat backEntry s nazvem '..'
+    //todo    this->mFS->getDirectoryEntryAddress(); // mSize = mSize + 1
+
+    // zapsat na freeCluster, ze je used
+    FAT::write(stream, this->mFS->clusterToFatAddress(freeCluster), FAT_FILE_END);
+
+    // todo do freeCluster data sekce zapsat newEntry s nazvem '.' a '..'
+    int32_t newDirAddress = this->mFS->clusterToAddress(freeCluster);
+    stream.seekp(newDirAddress);
+    newDirectoryEntry.mItemName = ".";
+    newDirectoryEntry.write(stream);
+    de.mItemName = "..";
+    de.write(stream);
     return true;
 }
 
