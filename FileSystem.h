@@ -29,7 +29,11 @@ public:
 
     void write(std::ostream &f);
 
-    void read(std::ifstream &f);
+    void write(std::ostream &f, int32_t pos);
+
+    void read(std::istream &f);
+
+    void read(std::istream &f, int32_t pos);
 
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };
@@ -72,9 +76,13 @@ private:
     FAT() {/* static class */}
 
 public:
-    static int write(std::ostream &f, int32_t pos, int32_t label);
+    static void write(std::ostream &f, int32_t pos, int32_t label);
+
+    static void write(std::ostream &f, int32_t label);
 
     static int read(std::istream &f, int32_t pos);
+
+    static int read(std::istream &f);
 
     static void wipe(std::ostream &f, int32_t startAddress, int32_t size);
 

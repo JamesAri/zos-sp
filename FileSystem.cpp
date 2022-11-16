@@ -29,11 +29,22 @@ void DirectoryEntry::write(std::ostream &f) {
     writeToStream(f, this->mStartCluster);
 }
 
-void DirectoryEntry::read(std::ifstream &f) {
+
+void DirectoryEntry::write(std::ostream &f, int32_t pos) {
+    f.seekp(pos);
+    this->write(f);
+}
+
+void DirectoryEntry::read(std::istream &f) {
     readFromStream(f, this->mItemName, ITEM_NAME_LENGTH);
     readFromStream(f, this->mIsFile);
     readFromStream(f, this->mSize);
     readFromStream(f, this->mStartCluster);
+}
+
+void DirectoryEntry::read(std::istream &f, int32_t pos) {
+    f.seekg(pos);
+    this->read(f);
 }
 
 std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
@@ -43,15 +54,24 @@ std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
               << "  StartCluster: " << di.mStartCluster << "\n";
 }
 
-int FAT::write(std::ostream &f, int32_t pos, int32_t label) {
-    return -1;
+void FAT::write(std::ostream &f, int32_t label) {
+    writeToStream(f, label);
+}
+
+void FAT::write(std::ostream &f, int32_t pos, int32_t label) {
+    f.seekp(pos);
+    FAT::write(f, label);
+}
+
+int FAT::read(std::istream &f) {
+    int32_t clusterTag;
+    readFromStream(f, clusterTag);
+    return clusterTag;
 }
 
 int FAT::read(std::istream &f, int32_t pos) {
     f.seekg(pos);
-    int32_t clusterTag;
-    readFromStream(f, clusterTag);
-    return clusterTag;
+    return FAT::read(f);
 }
 
 void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t size) {
@@ -68,7 +88,7 @@ int FAT::getFreeCluster(std::istream &f, const BootSector &bs) {
     int32_t label;
     for (int32_t i = 0; i < bs.mClusterCount; i++) {
         readFromStream(f, label);
-        if(label == FAT_UNUSED) return i;
+        if (label == FAT_UNUSED) return i;
     }
     return -1;
 }
@@ -125,9 +145,10 @@ std::ostream &operator<<(std::ostream &os, BootSector const &bs) {
               << "  ClusterCount: " << bs.mClusterCount << "\n"
               << "  DiskSize: " << bs.mDiskSize / FORMAT_UNIT << "MB\n"
               << "  FatCount: " << bs.mFatCount << "\n"
-              << "  Padding: " << bs.mPaddingSize << "B\n"
-              << "  Fat1StartAddress: " << bs.mFat1StartAddress << "\n"
-              << "  Fat2StartAddress: " << bs.mFat2StartAddress << "\n"
+              << "  Fat1StartAddress: " << bs.mFat1StartAddress << "-" << bs.mFat1StartAddress + bs.mFatSize << "\n"
+              << "  Fat2StartAddress: " << bs.mFat2StartAddress << "-" << bs.mFat2StartAddress + bs.mFatSize << "\n"
+              << "  Padding size: " << bs.mPaddingSize << "B\n"
+              << "  PaddingAddress: " << bs.mFat2StartAddress + bs.mFatSize << "-" << bs.mDataStartAddress - 1 << "\n"
               << "  DataStartAddress: " << bs.mDataStartAddress << "\n";
 }
 
@@ -138,7 +159,8 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
         try {
             this->read(f_in);
         } catch (...) {
-            std::cerr << "An error occurred during the loading process. Input file might be corrupted." << std::endl;
+            std::cerr << "An error occurred during the loading process.\n"
+                         "Input file might be corrupted." << std::endl;
         }
     else
         this->formatFS();
@@ -146,10 +168,16 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
 
 void FileSystem::write(std::ofstream &f, bool wipeData) {
     this->mBootSector.write(f);
-    f.seekp(this->mBootSector.mDataStartAddress); // jump to root dir (skip FAT tables)
-    this->mRootDir.write(f);
 
     if (wipeData) {
+        f.seekp(this->mBootSector.mDataStartAddress); // jump to root dir (skip FAT tables)
+
+        DirectoryEntry rootDir{std::string("."), false, DEFAULT_DIR_SIZE, 0};
+        DirectoryEntry rootDir2{std::string(".."), false, DEFAULT_DIR_SIZE, 0};
+        rootDir.write(f);
+        rootDir2.write(f);
+
+        // wipe each cluster
         char wipedCluster[CLUSTER_SIZE] = {'\00'};
         for (int i = 0; i < this->mBootSector.mClusterCount - 1; i++) { // -1 for root entry.
             writeToStream(f, wipedCluster, CLUSTER_SIZE);
@@ -174,16 +202,16 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 
 void FileSystem::formatFS(int size) {
     this->mBootSector = BootSector{size};
-    this->mRootDir = DirectoryEntry{std::string("ROOT_DIR"), false, 2, 0};
-    // todo: create ., .., ?????
-
 
     std::ofstream f_out{this->mFileName, std::ios::binary | std::ios::out};
 
     if (!f_out.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
 
+    // clean boot-sector and root directory
     this->write(f_out, true);
+
+    // wipe fat tables
     FAT::wipe(f_out, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
     FAT::wipe(f_out, this->mBootSector.mFat2StartAddress, this->mBootSector.mClusterCount);
 }
@@ -193,7 +221,7 @@ int FileSystem::clusterToAddress(int cluster) const {
 }
 
 int FileSystem::clusterToFatAddress(int cluster) const {
-    return this->mBootSector.mFat1StartAddress + cluster * sizeof(int32_t);
+    return this->mBootSector.mFat1StartAddress + cluster * static_cast<int32_t>(sizeof(int32_t));
 }
 
 

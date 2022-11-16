@@ -19,6 +19,7 @@ constexpr auto CLUSTER_SIZE = 512 * 8;
 
 constexpr auto ITEM_NAME_LENGTH = 12; // with EOF
 constexpr auto ROOT_DIR_NAME = "/";
+constexpr auto DEFAULT_DIR_SIZE = 2; // '.' and '..' references
 
 const std::string FS_OPEN_ERROR{"internal error, couldn't open file system file\""};
 
