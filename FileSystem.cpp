@@ -3,21 +3,17 @@
 
 #include <iostream>
 
-
 DirectoryEntry::DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
-    if (mItemName.length() >= ITEM_NAME_LENGTH) {
-        throw std::runtime_error(std::string("Error: file name too long. Character limit is ") +
-                                 std::to_string(ITEM_NAME_LENGTH - 1) + std::string("\n"));
-    }
+    if (mItemName.length() >= ITEM_NAME_LENGTH)
+        throw std::runtime_error(DE_DE_ITEM_NAME_LENGTH_ERROR);
     this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
 DirectoryEntry::DirectoryEntry(const std::string &mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
     if (mItemName.length() >= ITEM_NAME_LENGTH) {
-        throw std::runtime_error(std::string("Error: file name too long. Character limit is ") +
-                                 std::to_string(ITEM_NAME_LENGTH - 1) + std::string("\n"));
+        throw std::runtime_error(DE_DE_ITEM_NAME_LENGTH_ERROR);
     }
     this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
@@ -168,13 +164,13 @@ void FileSystem::write(std::ofstream &f, bool wipeData) {
     if (wipeData) {
         f.seekp(this->mBootSector.mDataStartAddress); // jump to root dir (skip FAT tables)
 
-        DirectoryEntry rootDir{std::string("."), false, DEFAULT_DIR_SIZE, 0};
-        DirectoryEntry rootDir2{std::string(".."), false, DEFAULT_DIR_SIZE, 0};
+        DirectoryEntry rootDir{std::string("."), false, 0, 0};
+        DirectoryEntry rootDir2{std::string(".."), false, 0, 0}; // do i need it? todo
         rootDir.write(f);
         rootDir2.write(f);
         this->mWorkingDirectory = rootDir;
 
-        // wipe each cluster
+        // Wipe each data cluster
         char wipedCluster[CLUSTER_SIZE] = {'\00'};
         for (int i = 0; i < this->mBootSector.mClusterCount - 1; i++) { // -1 for root entry.
             writeToStream(f, wipedCluster, CLUSTER_SIZE);
@@ -200,19 +196,20 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 void FileSystem::formatFS(int size) {
     this->mBootSector = BootSector{size};
 
-    std::ofstream f_out{this->mFileName, std::ios::binary | std::ios::out};
+    std::ofstream stream{this->mFileName, std::ios::binary | std::ios::out};
 
-    if (!f_out.is_open())
+    if (!stream.is_open()) {
         throw std::runtime_error(FS_OPEN_ERROR);
+    }
 
-    // clean boot-sector and root directory
-    this->write(f_out, true);
+    // Clean boot-sector and root directory
+    this->write(stream, true);
 
-    // wipe fat tables
-    FAT::wipe(f_out, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
+    // Wipe fat tables
+    FAT::wipe(stream, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
 
-    // label root directory
-    FAT::write(f_out, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
+    // Label root directory cluster
+    FAT::write(stream, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
 }
 
 int FileSystem::clusterToAddress(int cluster) const {
@@ -224,12 +221,22 @@ int FileSystem::clusterToFatAddress(int cluster) const {
 }
 
 
-int FileSystem::getDirectoryNextFreeEntryAddress(int cluster, int entriesCount) const {
-    if (entriesCount > MAX_ENTRIES)
-        throw std::runtime_error("entries limit reached");
-    if (entriesCount < 2)
-        throw std::runtime_error("internal error, directory missing references");
-    return clusterToAddress(cluster) + entriesCount * DirectoryEntry::SIZE;
+int FileSystem::getDirectoryNextFreeEntryAddress(int cluster) const {
+    std::ifstream stream(this->mFileName, std::ios::binary);
+    auto address = this->clusterToAddress(cluster);
+    stream.seekg(address);
+
+    DirectoryEntry temp{};
+    for (int entriesCount = 0; entriesCount < MAX_ENTRIES; entriesCount++) {
+        temp.read(stream);
+        if (temp.mItemName.at(0) == '\00') {
+            if (entriesCount < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            return address + entriesCount * DirectoryEntry::SIZE;
+        }
+    }
+    stream.close();
+    throw std::runtime_error(DE_LIMIT_REACHED_ERROR);
 }
 
 /**
@@ -239,20 +246,21 @@ int FileSystem::getDirectoryNextFreeEntryAddress(int cluster, int entriesCount) 
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
     auto address = this->clusterToAddress(cluster);
 
-    DirectoryEntry clusterDirectory{};
     std::ifstream stream(this->mFileName, std::ios::binary);
+
     stream.seekg(address);
-    clusterDirectory.read(stream);
-    auto entriesCount = clusterDirectory.mSize;
 
-    if (entriesCount > MAX_ENTRIES || entriesCount < 0)
-        throw std::runtime_error("internal error, file system is corrupted");
-
-    DirectoryEntry temp{};
-    for (int i = 1; i < entriesCount; i++) { // i = 1, we've already read the '.' entry.
-        temp.read(stream);
-        if (temp.mItemName == itemName) {
-            de = std::move(temp);
+    DirectoryEntry tempDE{};
+    auto itemNameCharArr = itemName.c_str();
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        tempDE.read(stream);
+        if (tempDE.mItemName.empty()) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            return false;
+        }
+        if (!strcmp(tempDE.mItemName.c_str(), itemNameCharArr)) { // ignore \00 (NULL) paddings
+            de = std::move(tempDE);
             return true;
         }
     }

@@ -18,9 +18,13 @@ constexpr auto FAT_COUNT = 1;
 constexpr auto CLUSTER_SIZE = 512 * 8;
 
 constexpr auto ITEM_NAME_LENGTH = 12; // with EOF
-constexpr auto ROOT_DIR_NAME = "/";
 constexpr auto DEFAULT_DIR_SIZE = 2; // '.' and '..' references
 
-const std::string FS_OPEN_ERROR{"internal error, couldn't open file system file\""};
+// fatal errors
+const std::string FS_OPEN_ERROR{"internal error, couldn't open file system file"};
+const std::string DE_MISSING_REFERENCES_ERROR{"internal error, directory missing references"};
+const std::string DE_LIMIT_REACHED_ERROR{"internal error, directory missing references"};
+const std::string DE_DE_ITEM_NAME_LENGTH_ERROR{"internal error, received invalid (too long) entry name"};
+
 
 #endif //ZOS_SP_DEFINITIONS_H

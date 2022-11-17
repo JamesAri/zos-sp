@@ -93,6 +93,7 @@ Možný výsledek:
 OK
 FILE NOT FOUND (neexistující adresář)
 NOT EMPTY (adresář obsahuje podadresáře, nebo soubory)
+
  */
 class RmCommand : public ICommand {
 

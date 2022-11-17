@@ -112,12 +112,10 @@ public:
 
     int clusterToFatAddress(int cluster) const;
 
-    /**
-     * @param entriesCount '.', '..', included (should correspond to memory structure).
-     */
-    int getDirectoryNextFreeEntryAddress(int cluster, int entriesCount) const;
+    int getDirectoryNextFreeEntryAddress(int cluster) const;
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
+
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
