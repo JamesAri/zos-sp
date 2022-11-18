@@ -37,7 +37,6 @@ bool MkdirCommand::run() {
 
     DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
 
-
     if (this->mAccumulator.size() > 1) {
         int curCluster = parentDE.mStartCluster;
         // Iterates over all directory entries (file names) in accumulator except the last entry, which is
@@ -92,18 +91,23 @@ bool MkdirCommand::validate_arguments() {
     this->mAccumulator = split(this->mOpt1, "/");
     auto newDirectoryName = this->mAccumulator.back();
 
-    if (!validateFileName(newDirectoryName)) // unnecessary todo
-        throw InvalidOptionException("invalid directory name");
-
     return true;
 }
 
 bool RmdirCommand::run() {
-    return true;
+    DirectoryEntry de{};
+    if (!this->mFS->findDirectoryEntry(this->mFS->mWorkingDirectory.mStartCluster, this->mOpt1, de))
+        throw InvalidOptionException("FILE NOT FOUND");
+
+    if (this->mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
+        throw InvalidOptionException("NOT EMPTY");
+    // move implementation here? todo
+    return this->mFS->removeDirectoryEntry(this->mFS->mWorkingDirectory.mStartCluster, this->mOpt1);
 }
 
 bool RmdirCommand::validate_arguments() {
-    return this->mOptCount == 1;
+    if (this->mOptCount != 1) return false;
+    return validateFileName(this->mOpt1);
 }
 
 bool LsCommand::run() {
@@ -157,14 +161,15 @@ bool CdCommand::validate_arguments() {
     this->mAccumulator = split(this->mOpt1, "/");
     auto newDirectoryName = this->mAccumulator.back();
 
-    if (!validateFileName(newDirectoryName)) // unnecessary todo
-        throw InvalidOptionException("invalid directory name");
-
     return true;
 }
 
 bool PwdCommand::run() {
-    std::cout << this->mFS->mWorkingDirectory << std::endl;
+    if (this->mFS->mWorkingDirectory.mStartCluster == 0) {
+        std::cout << "/" << std::endl;
+    } else {
+        std::cout << this->mFS->mWorkingDirectory.mItemName.c_str() << std::endl;
+    }
     return true;
 }
 

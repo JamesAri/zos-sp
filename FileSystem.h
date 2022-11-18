@@ -114,7 +114,12 @@ public:
     int getDirectoryNextFreeEntryAddress(int cluster) const;
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
+
     bool findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de);
+
+    bool removeDirectoryEntry(int parentCluster, const std::string &itemName);
+
+    int getDirectoryEntryCount(int cluster);
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;

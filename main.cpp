@@ -28,7 +28,7 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             MkdirCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eRmdirCommand:
-            RmdirCommand(options).process();
+            RmdirCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eLsCommand:
             LsCommand(options).process();

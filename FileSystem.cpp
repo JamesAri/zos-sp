@@ -245,10 +245,12 @@ int FileSystem::getDirectoryNextFreeEntryAddress(int cluster) const {
  * copies the found data into passed object.
  */
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
-    auto address = this->clusterToDataAddress(cluster);
-
     std::ifstream stream(this->mFileName, std::ios::binary);
 
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
+
+    auto address = this->clusterToDataAddress(cluster);
     stream.seekg(address);
 
     DirectoryEntry tempDE{};
@@ -269,9 +271,13 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
 }
 
 bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de) {
-    auto address = this->clusterToDataAddress(parentCluster);
-
     std::ifstream stream(this->mFileName, std::ios::binary);
+
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
+
+
+    auto address = this->clusterToDataAddress(parentCluster);
 
     stream.seekg(address);
 
@@ -294,9 +300,9 @@ bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, Directo
 bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
     std::ifstream stream(this->mFileName, std::ios::binary);
 
-    if (!stream.is_open()) {
+    if (!stream.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
-    }
+
     DirectoryEntry toFindDE{}, parentDE{};
 
     auto address = this->clusterToDataAddress(cluster);
@@ -313,6 +319,77 @@ bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
         return true;
     }
     return false;
+}
+
+/**
+ * Force delete, i.e. doesn't check if directory is empty.
+ */
+bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &itemName) {
+    auto itemNameCharArr = itemName.c_str();
+
+    if (!strcmp(itemNameCharArr, ".") || !strcmp(itemNameCharArr, "..")) return false;
+
+    std::fstream stream(this->mFileName, std::ios::out | std::ios::in | std::ios::binary);
+
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
+
+    auto startAddress = this->clusterToDataAddress(parentCluster);
+    int32_t removeAddress;
+    stream.seekg(startAddress);
+
+    DirectoryEntry tempDE{}, lastDE{};
+    char empty[DirectoryEntry::SIZE] = {'\00'};
+    bool erased = false;
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        tempDE.read(stream);
+        if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            if (!erased) return false; // we are at the end, and we didn't find entry to remove
+            stream.seekp(removeAddress);
+            lastDE.write(stream); // write last entry instead of erased entry
+            auto lastAddress = startAddress + (i - 1) * DirectoryEntry::SIZE;
+            stream.seekp(lastAddress);
+            stream.write(empty, DirectoryEntry::SIZE); // erase last entry
+            return true;
+        }
+        lastDE = tempDE;
+        if (!erased && !strcmp(tempDE.mItemName.c_str(), itemNameCharArr)) {
+            // label FAT cluster as unused
+            FAT::write(stream, this->clusterToFatAddress(tempDE.mStartCluster), FAT_UNUSED);
+            // remove entry from data cluster
+            removeAddress = startAddress + i * DirectoryEntry::SIZE;
+            stream.seekp(removeAddress);
+            stream.write(empty, DirectoryEntry::SIZE); // erase entry to be removed
+            erased = true;
+            stream.flush();
+        }
+    }
+    return false;
+}
+
+int FileSystem::getDirectoryEntryCount(int cluster) {
+    std::ifstream stream(this->mFileName, std::ios::binary);
+
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
+
+    auto address = this->clusterToDataAddress(cluster);
+
+    stream.seekg(address);
+
+    int i;
+    DirectoryEntry tempDE{};
+    for (i = 0; i < MAX_ENTRIES; i++) {
+        tempDE.read(stream);
+        if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            break;
+        }
+    }
+    return i;
 }
 
 
