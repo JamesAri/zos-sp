@@ -2,21 +2,12 @@
 #define ZOS_SP_FILESYSTEM_H
 
 #include "definitions.h"
-#include <string>
-#include <fstream>
-
-// MEMORY:
-//  BOOT SECTOR
-//  FAT1
-//  FAT2
-//  padding (0 <= padding < CLUSTER_SIZE), fill: (\00)
-//  DATA
 
 class DirectoryEntry {
 public:
     std::string mItemName;
     bool mIsFile;
-    int mSize;                   //soubor: velikost, adresar: kolik ma entries
+    int mSize;
     int mStartCluster;
 
     DirectoryEntry() {};
@@ -89,7 +80,13 @@ public:
 };
 
 /**
- * FAT FS
+ * FS MEMORY STRUCTURE:
+ *
+ * BOOT SECTOR
+ * FAT1
+ * FAT2
+ * padding (0 <= padding < CLUSTER_SIZE), fill value: \00
+ * DATA
  */
 class FileSystem {
 public:
@@ -108,14 +105,16 @@ public:
 
     void formatFS(int size = DEFAULT_FORMAT_SIZE);
 
-    int clusterToAddress(int cluster) const;
+    int clusterToDataAddress(int cluster) const;
 
     int clusterToFatAddress(int cluster) const;
+
+    bool getDirectory(int cluster, DirectoryEntry &de);
 
     int getDirectoryNextFreeEntryAddress(int cluster) const;
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
-
+    bool findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de);
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;

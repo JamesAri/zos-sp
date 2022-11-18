@@ -37,10 +37,10 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             CatCommand(options).process();
             break;
         case ECommands::eCdCommand:
-            CdCommand(options).process();
+            CdCommand(options).registerFS(pFS).process();
             break;
         case ECommands::ePwdCommand:
-            PwdCommand(options).process();
+            PwdCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eInfoCommand:
             InfoCommand(options).process();

@@ -23,8 +23,9 @@ constexpr auto DEFAULT_DIR_SIZE = 2; // '.' and '..' references
 // fatal errors
 const std::string FS_OPEN_ERROR{"internal error, couldn't open file system file"};
 const std::string DE_MISSING_REFERENCES_ERROR{"internal error, directory missing references"};
-const std::string DE_LIMIT_REACHED_ERROR{"internal error, directory missing references"};
-const std::string DE_DE_ITEM_NAME_LENGTH_ERROR{"internal error, received invalid (too long) entry name"};
+const std::string DE_LIMIT_REACHED_ERROR{"internal error, directory file count reached"};
+const std::string DE_ITEM_NAME_LENGTH_ERROR{"internal error, received invalid (too long) entry name"};
+const std::string DE_CORRUPTED_FS_ERROR{"internal error, filesystem is corrupted"};
 
 
 #endif //ZOS_SP_DEFINITIONS_H

@@ -1,19 +1,20 @@
 #include "FileSystem.h"
 #include "utils/stream-utils.h"
+#include "utils/validators.h"
 
 #include <iostream>
 
 DirectoryEntry::DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
     if (mItemName.length() >= ITEM_NAME_LENGTH)
-        throw std::runtime_error(DE_DE_ITEM_NAME_LENGTH_ERROR);
+        throw std::runtime_error(DE_ITEM_NAME_LENGTH_ERROR);
     this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
 DirectoryEntry::DirectoryEntry(const std::string &mItemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
     if (mItemName.length() >= ITEM_NAME_LENGTH) {
-        throw std::runtime_error(DE_DE_ITEM_NAME_LENGTH_ERROR);
+        throw std::runtime_error(DE_ITEM_NAME_LENGTH_ERROR);
     }
     this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
@@ -205,14 +206,14 @@ void FileSystem::formatFS(int size) {
     // Clean boot-sector and root directory
     this->write(stream, true);
 
-    // Wipe fat tables
+    // Wipe FAT tables
     FAT::wipe(stream, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
 
-    // Label root directory cluster
+    // Label root directory cluster in FAT
     FAT::write(stream, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
 }
 
-int FileSystem::clusterToAddress(int cluster) const {
+int FileSystem::clusterToDataAddress(int cluster) const {
     return this->mBootSector.mDataStartAddress + cluster * this->mBootSector.mClusterSize;
 }
 
@@ -223,13 +224,13 @@ int FileSystem::clusterToFatAddress(int cluster) const {
 
 int FileSystem::getDirectoryNextFreeEntryAddress(int cluster) const {
     std::ifstream stream(this->mFileName, std::ios::binary);
-    auto address = this->clusterToAddress(cluster);
+    auto address = this->clusterToDataAddress(cluster);
     stream.seekg(address);
 
     DirectoryEntry temp{};
     for (int entriesCount = 0; entriesCount < MAX_ENTRIES; entriesCount++) {
         temp.read(stream);
-        if (temp.mItemName.at(0) == '\00') {
+        if (!isAllocatedDirectoryEntry(temp.mItemName)) {
             if (entriesCount < DEFAULT_DIR_SIZE)
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
             return address + entriesCount * DirectoryEntry::SIZE;
@@ -244,7 +245,7 @@ int FileSystem::getDirectoryNextFreeEntryAddress(int cluster) const {
  * copies the found data into passed object.
  */
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
-    auto address = this->clusterToAddress(cluster);
+    auto address = this->clusterToDataAddress(cluster);
 
     std::ifstream stream(this->mFileName, std::ios::binary);
 
@@ -260,9 +261,58 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
             return false;
         }
         if (!strcmp(tempDE.mItemName.c_str(), itemNameCharArr)) { // ignore \00 (NULL) paddings
-            de = std::move(tempDE);
+            de = tempDE;
             return true;
         }
     }
     return false;
 }
+
+bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de) {
+    auto address = this->clusterToDataAddress(parentCluster);
+
+    std::ifstream stream(this->mFileName, std::ios::binary);
+
+    stream.seekg(address);
+
+    DirectoryEntry tempDE{};
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        tempDE.read(stream);
+        if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            return false;
+        }
+        if (tempDE.mStartCluster == childCluster) {
+            de = tempDE;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
+    std::ifstream stream(this->mFileName, std::ios::binary);
+
+    if (!stream.is_open()) {
+        throw std::runtime_error(FS_OPEN_ERROR);
+    }
+    DirectoryEntry toFindDE{}, parentDE{};
+
+    auto address = this->clusterToDataAddress(cluster);
+    stream.seekg(address);
+
+    toFindDE.read(stream);
+    if (!isAllocatedDirectoryEntry(toFindDE.mItemName)) return false;
+    parentDE.read(stream);
+    if (!isAllocatedDirectoryEntry(parentDE.mItemName)) return false;
+    stream.close();
+
+    if (this->findDirectoryEntry(parentDE.mStartCluster, toFindDE.mStartCluster, toFindDE)) {
+        de = toFindDE;
+        return true;
+    }
+    return false;
+}
+
+

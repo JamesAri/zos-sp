@@ -3,6 +3,7 @@
 #include "utils/validators.h"
 
 #include <algorithm>
+#include <fstream>
 
 bool CpCommand::run() {
     return true;
@@ -36,9 +37,10 @@ bool MkdirCommand::run() {
 
     DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
 
+
     if (this->mAccumulator.size() > 1) {
         int curCluster = parentDE.mStartCluster;
-        // Iterates over all directory entries (itemNames) in accumulator except the last entry, which is
+        // Iterates over all directory entries (file names) in accumulator except the last entry, which is
         // directory to create. If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
         for (auto it{this->mAccumulator.begin()}; it != std::prev(this->mAccumulator.end()); it++) {
             if (this->mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
@@ -54,9 +56,8 @@ bool MkdirCommand::run() {
 
     std::fstream stream(this->mFS->mFileName, std::ios::in | std::ios::out | std::ios::binary);
 
-    if (!stream.is_open()) {
+    if (!stream.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
-    }
 
     int32_t newFreeCluster = FAT::getFreeCluster(stream, this->mFS->mBootSector);
 
@@ -67,7 +68,7 @@ bool MkdirCommand::run() {
     newDE.write(stream);
 
     // Create new directory "." at new cluster
-    int32_t newDEAddress = this->mFS->clusterToAddress(newFreeCluster);
+    int32_t newDEAddress = this->mFS->clusterToDataAddress(newFreeCluster);
     stream.seekp(newDEAddress);
     newDE.mItemName = ".";
     newDE.write(stream);
@@ -91,10 +92,9 @@ bool MkdirCommand::validate_arguments() {
     this->mAccumulator = split(this->mOpt1, "/");
     auto newDirectoryName = this->mAccumulator.back();
 
-    if (!validateFileName(newDirectoryName))
+    if (!validateFileName(newDirectoryName)) // unnecessary todo
         throw InvalidOptionException("invalid directory name");
 
-    // todo check if path exists
     return true;
 }
 
@@ -123,14 +123,48 @@ bool CatCommand::validate_arguments() {
 }
 
 bool CdCommand::run() {
+    if (this->mAccumulator.empty())
+        throw std::runtime_error("internal error, received empty path accumulator");
+
+    auto destDirectory = this->mAccumulator.back();
+
+    DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
+
+    int curCluster = parentDE.mStartCluster;
+    // Iterates over all directory entries (file names) in accumulator.
+    // If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
+    for (auto &it: this->mAccumulator) {
+        if (this->mFS->findDirectoryEntry(curCluster, it, parentDE)) {
+            curCluster = parentDE.mStartCluster;
+        } else {
+            throw InvalidOptionException("PATH NOT FOUND");
+        }
+    }
+    if (!strcmp(parentDE.mItemName.c_str(), "..") || !strcmp(parentDE.mItemName.c_str(), ".")) {
+        if (!this->mFS->getDirectory(parentDE.mStartCluster, parentDE))
+            throw std::runtime_error(DE_CORRUPTED_FS_ERROR);
+    }
+    this->mFS->mWorkingDirectory = parentDE;
     return true;
 }
 
 bool CdCommand::validate_arguments() {
-    return this->mOptCount == 1;
+    if (this->mOptCount != 1) return false;
+
+    if (!validateFilePath(this->mOpt1))
+        throw InvalidOptionException("invalid directory path");
+
+    this->mAccumulator = split(this->mOpt1, "/");
+    auto newDirectoryName = this->mAccumulator.back();
+
+    if (!validateFileName(newDirectoryName)) // unnecessary todo
+        throw InvalidOptionException("invalid directory name");
+
+    return true;
 }
 
 bool PwdCommand::run() {
+    std::cout << this->mFS->mWorkingDirectory << std::endl;
     return true;
 }
 

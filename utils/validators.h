@@ -7,4 +7,6 @@ bool validateFileName(std::string &fileName);
 
 bool validateFilePath(std::string &fileName);
 
+bool isAllocatedDirectoryEntry(std::string &itemName);
+
 #endif //ZOS_SP_VALIDATORS_H
