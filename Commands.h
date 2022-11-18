@@ -87,13 +87,10 @@ private:
 };
 
 /**
-Smaže prázdný adresář a1
-rmdir a1
+rm s1
 Možný výsledek:
 OK
-FILE NOT FOUND (neexistující adresář)
-NOT EMPTY (adresář obsahuje podadresáře, nebo soubory)
-
+FILE NOT FOUND
  */
 class RmCommand : public ICommand {
 
