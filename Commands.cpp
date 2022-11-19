@@ -36,14 +36,14 @@ int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, int cluste
 void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, int directoryCluster, DirectoryEntry &newDE) {
     int32_t freeParentEntryAddr = getDirectoryNextFreeEntryAddress(fs, directoryCluster);
 
-    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::ate);
+    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::app);
     stream.seekp(freeParentEntryAddr);
     newDE.write(stream);
 }
 
 void writeToFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster, int label) {
     int address = fs->clusterToFatAddress(cluster);
-    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::ate);
+    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::app);
     FAT::write(stream, address, label);
 }
 
@@ -214,9 +214,8 @@ bool MkdirCommand::run() {
     writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newDE);
 
     // Create new directory "." at new cluster
-    std::ofstream stream(mFS->mFileName, std::ios::binary | std::ios::ate);
-    int32_t address = mFS->clusterToDataAddress(newFreeCluster);
-    stream.seekp(address);
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::out | std::ios::ate); // todo bug
+    seekStreamToDataCluster(mFS, stream, newFreeCluster);
     newDE.mItemName = ".";
     newDE.write(stream);
 
@@ -272,7 +271,7 @@ bool LsCommand::run() {
     }
 
     // Get filenames
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::ate); // todo
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::app); // todo
     seekStreamToDataCluster(mFS, stream, parentDE.mStartCluster);
 
     std::vector<std::string> fileNames{};
