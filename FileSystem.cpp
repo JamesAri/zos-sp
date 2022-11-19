@@ -81,17 +81,17 @@ void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t size) {
     }
 }
 
-std::vector<int> FAT::getFreeClusters(std::istream &f, const BootSector &bs, int fileSize) {
-    int count = std::ceil(fileSize / static_cast<double>(bs.mClusterSize));
-
+std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count) {
     if(count > MAX_ENTRIES)
         throw std::runtime_error("not enough space, format file system");
 
-    f.seekg(bs.mFat1StartAddress);
+    std::ifstream stream{fs->mFileName, std::ios::binary};
+    stream.seekg(fs->mBootSector.mFat1StartAddress);
+
     int32_t label;
     std::vector<int> clusters{};
-    for (int32_t i = 0; i < bs.mClusterCount && clusters.size() < count; i++) {
-        readFromStream(f, label);
+    for (int32_t i = 0; i < fs->mBootSector.mClusterCount && clusters.size() < count; i++) {
+        readFromStream(stream, label);
         if (label == FAT_UNUSED) {
             clusters.push_back(i);
         }
@@ -170,14 +170,6 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
         }
     else
         this->formatFS();
-}
-
-void FileSystem::read() {
-    this->mStream.open(this->mFileName, std::ios::binary | std::ios::in);
-}
-
-void FileSystem::write() {
-    this->mStream.open(this->mFileName, std::ios::binary | std::ios::out);
 }
 
 void FileSystem::readVFS(std::ifstream &f) {
@@ -395,7 +387,7 @@ int FileSystem::getDirectoryEntryCount(int cluster) {
     return i;
 }
 
-int FileSystem::getNeededClustersCount(int fileSize) {
+int FileSystem::getNeededClustersCount(int fileSize) const {
     return std::ceil(fileSize / static_cast<double>(this->mBootSector.mClusterSize));
 }
 

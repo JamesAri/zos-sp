@@ -30,6 +30,7 @@ public:
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };
 
+constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
 
 class BootSector {
 private:
@@ -62,24 +63,6 @@ public:
 };
 
 
-class FAT {
-private:
-    FAT() {/* static class */}
-
-public:
-    static void write(std::ostream &f, int32_t pos, int32_t label);
-
-    static void write(std::ostream &f, int32_t label);
-
-    static int read(std::istream &f, int32_t pos);
-
-    static int read(std::istream &f);
-
-    static void wipe(std::ostream &f, int32_t startAddress, int32_t size);
-
-    static std::vector<int> getFreeClusters(std::istream &f, const BootSector &bs, int count = 1);
-};
-
 /**
  * FS MEMORY STRUCTURE:
  *
@@ -98,10 +81,6 @@ public:
     DirectoryEntry mWorkingDirectory;
 
     explicit FileSystem(std::string &fileName);
-
-    void read();
-
-    void write();
 
     void readVFS(std::ifstream &f);
 
@@ -123,10 +102,27 @@ public:
 
     int getDirectoryEntryCount(int cluster);
 
-    int getNeededClustersCount(int fileSize);
+    int getNeededClustersCount(int fileSize) const;
 };
 
-constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
+
+class FAT {
+private:
+    FAT() {/* static class */}
+
+public:
+    static void write(std::ostream &f, int32_t pos, int32_t label);
+
+    static void write(std::ostream &f, int32_t label);
+
+    static int read(std::istream &f, int32_t pos);
+
+    static int read(std::istream &f);
+
+    static void wipe(std::ostream &f, int32_t startAddress, int32_t size);
+
+    static std::vector<int> getFreeClusters(std::shared_ptr<FileSystem> &fs, int count = 1);
+};
 
 
 #endif //ZOS_SP_FILESYSTEM_H

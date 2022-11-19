@@ -11,8 +11,16 @@ void pathCheck(const std::string &path) {
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 }
 
-int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int cluster) {
+void seekStreamToDataCluster(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int cluster) {
+    int32_t address = fs->clusterToDataAddress(cluster);
+    stream.seekp(address);
+}
+
+int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, int cluster) {
     auto address = fs->clusterToDataAddress(cluster);
+
+    std::ifstream stream{fs->mFileName, std::ios::binary};
+
     stream.seekg(address);
 
     DirectoryEntry temp{};
@@ -28,25 +36,24 @@ int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, std::fstre
     throw std::runtime_error(DE_LIMIT_REACHED_ERROR);
 }
 
-void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int directoryCluster,
-                       DirectoryEntry &newDE) {
-    int32_t freeParentEntryAddr = getDirectoryNextFreeEntryAddress(fs, stream, directoryCluster);
+void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, int directoryCluster,
+                            DirectoryEntry &newDE) {
+    int32_t freeParentEntryAddr = getDirectoryNextFreeEntryAddress(fs, directoryCluster);
+
+    std::ofstream stream{fs->mFileName, std::ios::binary};
     stream.seekp(freeParentEntryAddr);
     newDE.write(stream);
 }
 
-void seekStreamToDataCluster(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int cluster) {
-    int32_t address = fs->clusterToDataAddress(cluster);
-    stream.seekp(address);
-}
-
-void writeToFatByCluster(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int cluster, int label) {
+void writeToFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster, int label) {
     int address = fs->clusterToFatAddress(cluster);
+    std::ofstream stream{fs->mFileName, std::ios::binary};
     FAT::write(stream, address, label);
 }
 
-int readFromFatByCluster(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int cluster) {
+int readFromFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster) {
     int address = fs->clusterToFatAddress(cluster);
+    std::ifstream stream{fs->mFileName, std::ios::binary};
     return FAT::read(stream, address);
 }
 
@@ -55,7 +62,7 @@ bool isSpecialLabel(int label) {
 }
 
 std::vector<int>
-getFatClusterChain(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int fromCluster, int fileSize) {
+getFatClusterChain(std::shared_ptr<FileSystem> &fs, int fromCluster, int fileSize) {
     int clusterCount = fs->getNeededClustersCount(fileSize);
 
     if (clusterCount > MAX_ENTRIES)
@@ -65,82 +72,84 @@ getFatClusterChain(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int fr
     int curCluster = fromCluster;
     for (int i = 0; i < clusterCount; i++) {
         clusters.push_back(curCluster);
-        curCluster = readFromFatByCluster(fs, stream, curCluster);
+        curCluster = readFromFatByCluster(fs, curCluster);
         if (isSpecialLabel(curCluster) || curCluster >= fs->mBootSector.mClusterCount) break;
     }
-    int lastLabel = readFromFatByCluster(fs, stream, curCluster);
+    int lastLabel = readFromFatByCluster(fs, curCluster);
     if (clusters.size() != clusterCount || lastLabel != FAT_FILE_END)
         throw std::runtime_error("filesystem corrupted"); // todo mark as bad clusters
 
     return clusters;
 }
 
+//todo complete refactor
 bool CpCommand::run() {
-    auto newFileName = mAccumulator.back();
-
-    DirectoryEntry parentDE = mFS->mWorkingDirectory;
-
-    if (mAccumulator.size() > 1) {
-        int curCluster = parentDE.mStartCluster;
-        for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
-            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
-                curCluster = parentDE.mStartCluster;
-            } else {
-                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-            }
-        }
-    }
-
-    if (mFS->findDirectoryEntry(parentDE.mStartCluster, newFileName, parentDE)) // exists -> delete
-        mFS->removeDirectoryEntry(parentDE.mStartCluster, newFileName);
-
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
-
-    int clusterSize = mFS->mBootSector.mClusterSize;
-    int fileSize = mFromDE.mSize;
-
-    // Get free clusters
-    auto clusters = FAT::getFreeClusters(stream, mFS->mBootSector, fileSize);
-
-    // Mark clusters in FAT tables
-    for (int i = 0; i < clusters.size() - 1; i++) {
-        writeToFatByCluster(mFS, stream, clusters.at(i), clusters.at(i + 1));
-    }
-    writeToFatByCluster(mFS, stream, clusters.back(), FAT_FILE_END);
-
-    // Move data
-    int curCluster = mFromDE.mStartCluster;
-    char clusterBfr[clusterSize];
-
-    for (int i = 0; i < clusters.size() - 1; i++) {
-        if (curCluster == FAT_UNUSED
-            || curCluster == FAT_FILE_END
-            || curCluster == FAT_BAD_CLUSTER
-            || curCluster >= mFS->mBootSector.mClusterCount) {
-            // todo mark bad section function
-            throw std::runtime_error(CORRUPTED_FS_ERROR);
-        }
-        seekStreamToDataCluster(mFS, stream, curCluster);
-        stream.read(clusterBfr, clusterSize);
-
-        seekStreamToDataCluster(mFS, stream, clusters.at(i));
-        stream.write(clusterBfr, clusterSize);
-
-        curCluster = readFromFatByCluster(mFS, stream, curCluster);
-    }
-    if (readFromFatByCluster(mFS, stream, curCluster) != FAT_FILE_END) {
-        // todo mark bad section function
-        throw std::runtime_error(CORRUPTED_FS_ERROR);
-    }
-    seekStreamToDataCluster(mFS, stream, curCluster);
-    stream.read(clusterBfr, clusterSize);
-
-    seekStreamToDataCluster(mFS, stream, clusters.back());
-    stream.write(clusterBfr, clusterSize);
-
-    // Write directory entry
-    DirectoryEntry newFileDE{newFileName, true, fileSize, clusters.at(0)};
-    writeNewDirectoryEntry(mFS, stream, parentDE.mStartCluster, newFileDE);
+//    auto newFileName = mAccumulator.back();
+//
+//    DirectoryEntry parentDE = mFS->mWorkingDirectory;
+//
+//    if (mAccumulator.size() > 1) {
+//        int curCluster = parentDE.mStartCluster;
+//        for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
+//            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
+//                curCluster = parentDE.mStartCluster;
+//            } else {
+//                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+//            }
+//        }
+//    }
+//
+//    if (mFS->findDirectoryEntry(parentDE.mStartCluster, newFileName, parentDE)) // exists -> delete
+//        mFS->removeDirectoryEntry(parentDE.mStartCluster, newFileName);
+//
+////    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
+//
+//    int clusterSize = mFS->mBootSector.mClusterSize;
+//    int fileSize = mFromDE.mSize;
+//    int neededClusters = mFS->getNeededClustersCount(fileSize);
+//
+//    // Get free clusters
+//    auto clusters = FAT::getFreeClusters(mFS, neededClusters);
+//
+//    // Mark clusters in FAT tables
+//    for (int i = 0; i < clusters.size() - 1; i++) {
+//        writeToFatByCluster(mFS, clusters.at(i), clusters.at(i + 1));
+//    }
+//    writeToFatByCluster(mFS, clusters.back(), FAT_FILE_END);
+//
+//    // Move data
+//    int curCluster = mFromDE.mStartCluster;
+//    char clusterBfr[clusterSize];
+//
+//    for (int i = 0; i < clusters.size() - 1; i++) {
+//        if (curCluster == FAT_UNUSED
+//            || curCluster == FAT_FILE_END
+//            || curCluster == FAT_BAD_CLUSTER
+//            || curCluster >= mFS->mBootSector.mClusterCount) {
+//            // todo mark bad section function
+//            throw std::runtime_error(CORRUPTED_FS_ERROR);
+//        }
+//        seekStreamToDataCluster(mFS, stream, curCluster);
+//        stream.read(clusterBfr, clusterSize);
+//
+//        seekStreamToDataCluster(mFS, stream, clusters.at(i));
+//        stream.write(clusterBfr, clusterSize);
+//
+//        curCluster = readFromFatByCluster(mFS, stream, curCluster);
+//    }
+//    if (readFromFatByCluster(mFS, stream, curCluster) != FAT_FILE_END) {
+//        // todo mark bad section function
+//        throw std::runtime_error(CORRUPTED_FS_ERROR);
+//    }
+//    seekStreamToDataCluster(mFS, stream, curCluster);
+//    stream.read(clusterBfr, clusterSize);
+//
+//    seekStreamToDataCluster(mFS, stream, clusters.back());
+//    stream.write(clusterBfr, clusterSize);
+//
+//    // Write directory entry
+//    DirectoryEntry newFileDE{newFileName, true, fileSize, clusters.at(0)};
+//    writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newFileDE);
     return true;
 }
 
@@ -192,29 +201,24 @@ bool MkdirCommand::run() {
 
     if (mAccumulator.size() > 1) {
         int curCluster = parentDE.mStartCluster;
-        // Iterates over all directory entries (file names) in accumulator except the last entry, which is
-        // directory to create. If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
         for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
-            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
-                curCluster = parentDE.mStartCluster;
-            } else {
-                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-            }
+            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) curCluster = parentDE.mStartCluster;
+            else throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
         }
     }
 
     if (mFS->findDirectoryEntry(parentDE.mStartCluster, newDirectoryName, parentDE))
         throw InvalidOptionException(EXIST_ERROR);
 
-    std::fstream stream(mFS->mFileName, std::ios::in | std::ios::out | std::ios::binary);
 
-    int32_t newFreeCluster = FAT::getFreeClusters(stream, mFS->mBootSector).back();
+    int32_t newFreeCluster = FAT::getFreeClusters(mFS).back();
 
     // Update parent directory with the new directory entry
     DirectoryEntry newDE{newDirectoryName, false, 0, newFreeCluster};
-    writeNewDirectoryEntry(mFS, stream, parentDE.mStartCluster, newDE);
+    writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newDE);
 
     // Create new directory "." at new cluster
+    std::fstream stream(mFS->mFileName, std::ios::out | std::ios::binary);
     seekStreamToDataCluster(mFS, stream, newFreeCluster);
     newDE.mItemName = ".";
     newDE.write(stream);
@@ -222,9 +226,10 @@ bool MkdirCommand::run() {
     // Create new directory ".." at new cluster
     parentDE.mItemName = "..";
     parentDE.write(stream);
+    stream.close(); // todo
 
     // All went ok, label new cluster as allocated
-    writeToFatByCluster(mFS, stream, newFreeCluster, FAT_FILE_END);
+    writeToFatByCluster(mFS, newFreeCluster, FAT_FILE_END);
     return true;
 }
 
@@ -270,8 +275,7 @@ bool LsCommand::run() {
     }
 
     // Get filenames
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in);
-
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in); // todo
     seekStreamToDataCluster(mFS, stream, parentDE.mStartCluster);
 
     std::vector<std::string> fileNames{};
@@ -289,6 +293,7 @@ bool LsCommand::run() {
         std::cout << fn.c_str() << " ";
     }
     std::cout << std::endl;
+    stream.close(); //todo
     return true;
 }
 
@@ -394,9 +399,9 @@ bool InfoCommand::run() {
         return true;
     }
 
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
+//    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
 
-    auto clusters = getFatClusterChain(mFS, stream, de.mStartCluster, de.mSize);
+    auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
 
     for (auto it{clusters.begin()}; it != std::prev(clusters.end()); it++) {
         std::cout << *it << " ";
@@ -414,31 +419,33 @@ bool InfoCommand::validate_arguments() {
 }
 
 bool IncpCommand::run() {
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
 
     int clusterSize = mFS->mBootSector.mClusterSize;
     int fileSize = static_cast<int>(mBuffer.size());
     int trailingBytes = fileSize % clusterSize;
+    int neededClusters = mFS->getNeededClustersCount(fileSize);
 
     // Get free clusters
-    auto clusters = FAT::getFreeClusters(stream, mFS->mBootSector, fileSize);
+    auto clusters = FAT::getFreeClusters(mFS, neededClusters);
 
     // Mark clusters in FAT tables
     for (int i = 0; i < clusters.size() - 1; i++) {
-        writeToFatByCluster(mFS, stream, clusters.at(i), clusters.at(i + 1));
+        writeToFatByCluster(mFS, clusters.at(i), clusters.at(i + 1));
     }
-    writeToFatByCluster(mFS, stream, clusters.back(), FAT_FILE_END);
+    writeToFatByCluster(mFS, clusters.back(), FAT_FILE_END);
 
     // Move data
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::out);
     for (int i = 0; i < clusters.size() - 1; i++) {
         seekStreamToDataCluster(mFS, stream, clusters.at(i));
         stream.write((char *) (&mBuffer[i * clusterSize]), clusterSize);
     }
     seekStreamToDataCluster(mFS, stream, clusters.back());
     stream.write((char *) (&mBuffer[fileSize - trailingBytes]), trailingBytes); // todo check on bigger files
+    stream.close(); // todo
 
     DirectoryEntry newFileDE{mOpt1, true, fileSize, clusters.at(0)};
-    writeNewDirectoryEntry(mFS, stream, mDestDE.mStartCluster, newFileDE);
+    writeNewDirectoryEntry(mFS, mDestDE.mStartCluster, newFileDE);
     return true;
 }
 
