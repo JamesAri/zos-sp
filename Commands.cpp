@@ -6,10 +6,12 @@
 #include <fstream>
 #include <cmath>
 
-bool CpCommand::run() {
-    if (mAccumulator.empty())
-        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
+void pathCheck(const std::string &path) {
+    if (!validateFilePath(path))
+        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
+}
 
+bool CpCommand::run() {
     auto newFileName = mAccumulator.back();
 
     DirectoryEntry parentDE = mFS->mWorkingDirectory;
@@ -32,9 +34,6 @@ bool CpCommand::run() {
 
     std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
 
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
-
     int clusterSize = mFS->mBootSector.mClusterSize;
     int fileSize = mFromDE.mSize;
     int neededClusters = std::ceil(fileSize / static_cast<double>(clusterSize));
@@ -42,7 +41,7 @@ bool CpCommand::run() {
     // Get free clusters
     std::vector<int> clusters{};
     for (int i = 0; i < neededClusters; i++) {
-        clusters.push_back(FAT::getFreeCluster(stream, mFS->mBootSector));
+        clusters.push_back(FAT::getFreeCluster(stream, mFS->mBootSector)); // todo wrong
     }
 
     // Mark clusters in FAT tables
@@ -90,11 +89,7 @@ bool CpCommand::run() {
     // Write directory entry
     auto entryAddress = mFS->getDirectoryNextFreeEntryAddress(parentDE.mStartCluster);
     stream.seekp(entryAddress);
-    DirectoryEntry newFileDE{};
-    newFileDE.mItemName = newFileName;
-    newFileDE.mIsFile = true;
-    newFileDE.mStartCluster = clusters.at(0);
-    newFileDE.mSize = fileSize;
+    DirectoryEntry newFileDE{newFileName, true, fileSize, clusters.at(0)};
     newFileDE.write(stream);
 
     return true;
@@ -103,12 +98,8 @@ bool CpCommand::run() {
 bool CpCommand::validate_arguments() {
     if (mOptCount != 2) return false;
 
-    // FS path check
-    if (!validateFilePath(mOpt1))
-        throw InvalidOptionException(INVALID_DIR_PATH_ERROR + " (first argument)");
-
-    if (!validateFilePath(mOpt2))
-        throw InvalidOptionException(INVALID_DIR_PATH_ERROR + " (second argument)");
+    pathCheck(mOpt1);
+    pathCheck(mOpt2);
 
     auto fileNames = split(mOpt1, "/");
     DirectoryEntry fromDE{};
@@ -146,9 +137,6 @@ bool RmCommand::validate_arguments() {
 }
 
 bool MkdirCommand::run() {
-    if (mAccumulator.empty())
-        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
-
     auto newDirectoryName = mAccumulator.back();
 
     DirectoryEntry parentDE = mFS->mWorkingDirectory;
@@ -170,9 +158,6 @@ bool MkdirCommand::run() {
         throw InvalidOptionException(EXIST_ERROR);
 
     std::fstream stream(mFS->mFileName, std::ios::in | std::ios::out | std::ios::binary);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
 
     int32_t newFreeCluster = FAT::getFreeCluster(stream, mFS->mBootSector);
 
@@ -200,24 +185,20 @@ bool MkdirCommand::run() {
 
 bool MkdirCommand::validate_arguments() {
     if (mOptCount != 1) return false;
-
-    if (!validateFilePath(mOpt1))
-        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
-
+    pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
-    auto newDirectoryName = mAccumulator.back();
-
     return true;
 }
 
 bool RmdirCommand::run() {
     DirectoryEntry de{};
+
     if (!mFS->findDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1, de))
         throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
 
     if (mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
         throw InvalidOptionException(NOT_EMPTY_ERROR);
-    // move implementation here? todo
+
     return mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1);
 }
 
@@ -228,7 +209,6 @@ bool RmdirCommand::validate_arguments() {
 
 bool LsCommand::run() {
     // Resolve path
-
     DirectoryEntry parentDE = mFS->mWorkingDirectory;
 
     if (!mAccumulator.empty()) {
@@ -246,9 +226,6 @@ bool LsCommand::run() {
 
     // Get filenames
     std::ifstream stream(mFS->mFileName, std::ios::binary);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
 
     auto address = mFS->clusterToDataAddress(parentDE.mStartCluster);
     stream.seekg(address);
@@ -274,10 +251,7 @@ bool LsCommand::run() {
 bool LsCommand::validate_arguments() {
     if (mOptCount == 0) return true;
     if (mOptCount != 1) return false;
-
-    if (!validateFilePath(mOpt1))
-        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
-
+    pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
     return true;
 }
@@ -291,9 +265,6 @@ bool CatCommand::validate_arguments() {
 }
 
 bool CdCommand::run() {
-    if (mAccumulator.empty())
-        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
-
     DirectoryEntry parentDE = mFS->mWorkingDirectory;
 
     int curCluster = parentDE.mStartCluster;
@@ -316,10 +287,7 @@ bool CdCommand::run() {
 
 bool CdCommand::validate_arguments() {
     if (mOptCount != 1) return false;
-
-    if (!validateFilePath(mOpt1))
-        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
-
+    pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
     return true;
 }
@@ -367,9 +335,6 @@ bool PwdCommand::validate_arguments() {
 }
 
 bool InfoCommand::run() {
-    if (mAccumulator.empty())
-        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
-
     DirectoryEntry de = mFS->mWorkingDirectory;
 
     int curCluster = de.mStartCluster;
@@ -410,19 +375,13 @@ bool InfoCommand::run() {
 
 bool InfoCommand::validate_arguments() {
     if (mOptCount != 1) return false;
-
-    if (!validateFilePath(mOpt1))
-        throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-
+    pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
     return true;
 }
 
 bool IncpCommand::run() {
     std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
 
     int clusterSize = mFS->mBootSector.mClusterSize;
     int fileSize = static_cast<int>(mBuffer.size());
@@ -455,13 +414,8 @@ bool IncpCommand::run() {
 
     auto entryAddress = mFS->getDirectoryNextFreeEntryAddress(mDestDE.mStartCluster);
     stream.seekp(entryAddress);
-    DirectoryEntry newFileDE{};
-    newFileDE.mItemName = mOpt1;
-    newFileDE.mIsFile = true;
-    newFileDE.mStartCluster = clusters.at(0);
-    newFileDE.mSize = fileSize;
+    DirectoryEntry newFileDE{mOpt1, true, fileSize, clusters.at(0)};
     newFileDE.write(stream);
-
     return true;
 }
 
@@ -469,8 +423,7 @@ bool IncpCommand::validate_arguments() {
     if (mOptCount != 2) return false;
 
     // Input file check
-    if (!validateFileName(mOpt1))
-        throw InvalidOptionException(INVALID_FILE_NAME_ERROR);
+    pathCheck(mOpt1);
 
     std::ifstream stream(mOpt1, std::ios::binary | std::ios::ate);
 
@@ -486,9 +439,7 @@ bool IncpCommand::validate_arguments() {
 
     stream.close();
 
-    // FS path check
-    if (!validateFilePath(mOpt2))
-        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
+    pathCheck(mOpt2);
 
     auto fileNames = split(mOpt2, "/");
 
@@ -526,7 +477,7 @@ bool FormatCommand::run() {
     try {
         mFS->formatFS(std::stoi(mOpt1));
     } catch (...) {
-        std::cerr << "internal error, terminating" << std::endl;
+        std::cerr << "internal error, couldn't format file system" << std::endl;
         exit(1);
     }
     return true;
@@ -538,14 +489,12 @@ bool FormatCommand::validate_arguments() {
     std::transform(mOpt1.begin(), mOpt1.end(), mOpt1.begin(),
                    [](unsigned char c) { return std::toupper(c); });
 
-    std::vector<std::string> allowedFormats{"MB"};
-
-    auto pos = mOpt1.find(allowedFormats[0]);
+    auto pos = mOpt1.find(ALLOWED_FORMATS[0]);
 
     if (pos == std::string::npos)
         throw InvalidOptionException(CANNOT_CREATE_FILE_ERROR + " (wrong unit)");
 
-    mOpt1.erase(pos, allowedFormats[0].length());
+    mOpt1.erase(pos, ALLOWED_FORMATS[0].length());
 
     if (!is_number(mOpt1))
         throw InvalidOptionException(CANNOT_CREATE_FILE_ERROR + " (not a number)");

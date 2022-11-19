@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 const int32_t FAT_UNUSED = INT32_MAX - 1; // ffff fffe
 const int32_t FAT_FILE_END = INT32_MAX - 2; // ffff fffd
@@ -13,6 +14,8 @@ constexpr auto SIGNATURE_LENGTH = 10; // with EOF
 
 constexpr auto DEFAULT_FORMAT_SIZE = 1; // MB
 constexpr auto FORMAT_UNIT = 1'000'000; // MB -> B
+const std::vector<std::string> ALLOWED_FORMATS{"MB"};
+
 
 constexpr auto FAT_COUNT = 1;
 constexpr auto CLUSTER_SIZE = 512 * 8;
@@ -26,7 +29,6 @@ const std::string DE_MISSING_REFERENCES_ERROR{"internal error, directory missing
 const std::string DE_LIMIT_REACHED_ERROR{"internal error, directory file limit reached"};
 const std::string DE_ITEM_NAME_LENGTH_ERROR{"internal error, received invalid (too long) entry name"};
 const std::string CORRUPTED_FS_ERROR{"internal error, file system is corrupted"};
-const std::string EMPTY_ACCUMULATOR_ERROR{"internal error, received empty path accumulator"};
 const std::string FILE_READ_ERROR{"internal error, couldn't read file contents"};
 
 // Runtime recoverable errors (custom)

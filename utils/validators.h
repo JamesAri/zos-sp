@@ -3,10 +3,10 @@
 
 #include <regex>
 
-bool validateFileName(std::string &fileName);
+bool validateFileName(const std::string &fileName);
 
-bool validateFilePath(std::string &fileName);
+bool validateFilePath(const std::string &fileName);
 
-bool isAllocatedDirectoryEntry(std::string &itemName);
+bool isAllocatedDirectoryEntry(const std::string &itemName);
 
 #endif //ZOS_SP_VALIDATORS_H
