@@ -297,6 +297,12 @@ bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, Directo
     return false;
 }
 
+/**
+ * Resolves "." DirectoryEntry reference from passed cluster id and returns the
+ * same DirectoryEntry, but with name from parent directory (directory name).
+ * @param de DirectoryEntry with correct name.
+ * @return True on success, false otherwise.
+ */
 bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
     std::ifstream stream(this->mFileName, std::ios::binary);
 
@@ -310,8 +316,10 @@ bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
 
     toFindDE.read(stream);
     if (!isAllocatedDirectoryEntry(toFindDE.mItemName)) return false;
+
     parentDE.read(stream);
     if (!isAllocatedDirectoryEntry(parentDE.mItemName)) return false;
+
     stream.close();
 
     if (this->findDirectoryEntry(parentDE.mStartCluster, toFindDE.mStartCluster, toFindDE)) {

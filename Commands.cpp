@@ -111,11 +111,59 @@ bool RmdirCommand::validate_arguments() {
 }
 
 bool LsCommand::run() {
+    // Resolve path
+
+    DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
+
+    if (!this->mAccumulator.empty()) {
+        int curCluster = parentDE.mStartCluster;
+        // Iterates over all directory entries (file names) in accumulator.
+        // If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
+        for (auto &it: this->mAccumulator) {
+            if (this->mFS->findDirectoryEntry(curCluster, it, parentDE)) {
+                curCluster = parentDE.mStartCluster;
+            } else {
+                throw InvalidOptionException("PATH NOT FOUND");
+            }
+        }
+    }
+
+    // Get filenames
+    std::ifstream stream(this->mFS->mFileName, std::ios::binary);
+
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
+
+    auto address = this->mFS->clusterToDataAddress(parentDE.mStartCluster);
+    stream.seekg(address);
+
+    std::vector<std::string> fileNames{};
+    DirectoryEntry de{};
+
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        de.read(stream);
+        if (!isAllocatedDirectoryEntry(de.mItemName)) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+        }
+        fileNames.push_back(de.mItemName);
+    }
+    for (auto &fn: fileNames) {
+        std::cout << fn.c_str() << " ";
+    }
+    std::cout << std::endl;
     return true;
 }
 
 bool LsCommand::validate_arguments() {
-    return this->mOptCount == 0 || this->mOptCount == 1;
+    if (this->mOptCount == 0) return true;
+    if (this->mOptCount != 1) return false;
+
+    if (!validateFilePath(this->mOpt1))
+        throw InvalidOptionException("invalid directory path");
+
+    this->mAccumulator = split(this->mOpt1, "/");
+    return true;
 }
 
 bool CatCommand::run() {
@@ -129,8 +177,6 @@ bool CatCommand::validate_arguments() {
 bool CdCommand::run() {
     if (this->mAccumulator.empty())
         throw std::runtime_error("internal error, received empty path accumulator");
-
-    auto destDirectory = this->mAccumulator.back();
 
     DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
 
@@ -146,7 +192,7 @@ bool CdCommand::run() {
     }
     if (!strcmp(parentDE.mItemName.c_str(), "..") || !strcmp(parentDE.mItemName.c_str(), ".")) {
         if (!this->mFS->getDirectory(parentDE.mStartCluster, parentDE))
-            throw std::runtime_error(DE_CORRUPTED_FS_ERROR);
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
     }
     this->mFS->mWorkingDirectory = parentDE;
     return true;
@@ -159,17 +205,40 @@ bool CdCommand::validate_arguments() {
         throw InvalidOptionException("invalid directory path");
 
     this->mAccumulator = split(this->mOpt1, "/");
-    auto newDirectoryName = this->mAccumulator.back();
-
     return true;
 }
 
 bool PwdCommand::run() {
     if (this->mFS->mWorkingDirectory.mStartCluster == 0) {
         std::cout << "/" << std::endl;
-    } else {
-        std::cout << this->mFS->mWorkingDirectory.mItemName.c_str() << std::endl;
+        return true;
     }
+
+    std::vector<std::string> fileNames{};
+
+    DirectoryEntry de = this->mFS->mWorkingDirectory;
+
+    int safetyCounter = 0;
+    int childCluster = de.mStartCluster, parentCluster;
+
+    while (true) {
+        safetyCounter++;
+        if (safetyCounter > MAX_ENTRIES)
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
+        if (childCluster == 0) break;
+        if (this->mFS->findDirectoryEntry(childCluster, "..", de)) {
+            parentCluster = de.mStartCluster;
+            this->mFS->findDirectoryEntry(parentCluster, childCluster, de);
+            childCluster = parentCluster;
+            fileNames.push_back(de.mItemName);
+        } else {
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
+        }
+    }
+    for (auto it = fileNames.rbegin(); it != fileNames.rend(); ++it) {
+        std::cout << "/" << it->c_str();
+    }
+    std::cout << std::endl;
     return true;
 }
 
