@@ -1,7 +1,0 @@
-Nejaky text.
-Nova radka.
-  3.radk\00
-.
-
-
-

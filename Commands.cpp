@@ -367,11 +367,55 @@ bool PwdCommand::validate_arguments() {
 }
 
 bool InfoCommand::run() {
+    if (mAccumulator.empty())
+        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
+
+    DirectoryEntry de = mFS->mWorkingDirectory;
+
+    int curCluster = de.mStartCluster;
+    for (auto &it: mAccumulator) {
+        if (mFS->findDirectoryEntry(curCluster, it, de)) {
+            curCluster = de.mStartCluster;
+        } else {
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+        }
+    }
+    if (!de.mIsFile) {
+        std::cout << de << std::endl;
+        return true;
+    }
+    int clusterCount = std::ceil(de.mSize / static_cast<double>(mFS->mBootSector.mClusterSize));
+
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
+    curCluster = de.mStartCluster;
+    std::vector<int> clusters{};
+    clusters.push_back(curCluster);
+
+    for(int i = 0; i < clusterCount; i++) {
+        int fatAddress = mFS->clusterToFatAddress(curCluster);
+        curCluster = FAT::read(stream, fatAddress);
+        clusters.push_back(curCluster);
+    }
+
+    if(clusters.back() != FAT_FILE_END)
+        throw std::runtime_error(CORRUPTED_FS_ERROR);
+
+    for (auto it{clusters.begin()}; it != std::prev(clusters.end()); it++) {
+        std::cout << *it << " ";
+    }
+    std::cout << std::endl;
+
     return true;
 }
 
 bool InfoCommand::validate_arguments() {
-    return mOptCount == 1;
+    if (mOptCount != 1) return false;
+
+    if (!validateFilePath(mOpt1))
+        throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+
+    mAccumulator = split(mOpt1, "/");
+    return true;
 }
 
 bool IncpCommand::run() {
@@ -388,7 +432,9 @@ bool IncpCommand::run() {
     // Get free clusters
     std::vector<int> clusters{};
     for (int i = 0; i < neededClusters; i++) {
-        clusters.push_back(FAT::getFreeCluster(stream, mFS->mBootSector));
+        int freeCluster = FAT::getFreeCluster(stream, mFS->mBootSector);
+        FAT::write(stream, mFS->clusterToFatAddress(freeCluster), FAT_FILE_END); // temp
+        clusters.push_back(freeCluster);
     }
 
     // Mark clusters in FAT tables
@@ -396,7 +442,7 @@ bool IncpCommand::run() {
         int address = mFS->clusterToFatAddress(clusters.at(i));
         FAT::write(stream, address, clusters.at(i + 1));
     }
-    FAT::write(stream, mFS->clusterToFatAddress(clusters.back()), FAT_FILE_END);
+//    FAT::write(stream, mFS->clusterToFatAddress(clusters.back()), FAT_FILE_END);
 
     // Move data
     for (int i = 0; i < clusters.size() - 1; i++) {
