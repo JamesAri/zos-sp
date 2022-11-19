@@ -38,7 +38,6 @@ bool CpCommand::run() {
     int clusterSize = mFS->mBootSector.mClusterSize;
     int fileSize = mFromDE.mSize;
     int neededClusters = std::ceil(fileSize / static_cast<double>(clusterSize));
-    int trailingBytes = fileSize % clusterSize;
 
     // Get free clusters
     std::vector<int> clusters{};
@@ -54,31 +53,36 @@ bool CpCommand::run() {
     FAT::write(stream, mFS->clusterToFatAddress(clusters.back()), FAT_FILE_END);
 
     // Move data
-    int nextCluster = mFromDE.mStartCluster, dataAddressFrom, dataAddressTo, fatAddress;
+    int dataAddressFrom, dataAddressTo, fatAddress;
+    int curCluster = mFromDE.mStartCluster;
     char clusterBfr[clusterSize];
     for (int i = 0; i < clusters.size() - 1; i++) {
-        if (nextCluster == FAT_UNUSED || nextCluster == FAT_FILE_END || nextCluster == FAT_BAD_CLUSTER) {
+        if (curCluster == FAT_UNUSED || curCluster == FAT_FILE_END || curCluster == FAT_BAD_CLUSTER
+            || curCluster >= mFS->mBootSector.mClusterCount) {
             FAT::write(stream, fatAddress, FAT_BAD_CLUSTER);
             throw std::runtime_error(CORRUPTED_FS_ERROR);
         }
-
-        dataAddressFrom = mFS->clusterToDataAddress(nextCluster);
+        dataAddressFrom = mFS->clusterToDataAddress(curCluster);
         stream.seekp(dataAddressFrom);
         stream.read(clusterBfr, clusterSize);
+
         dataAddressTo = mFS->clusterToDataAddress(clusters.at(i));
         stream.seekp(dataAddressTo);
         stream.write(clusterBfr, clusterSize);
 
-        fatAddress = mFS->clusterToFatAddress(nextCluster);
-        nextCluster = FAT::read(stream, fatAddress);
+        fatAddress = mFS->clusterToFatAddress(curCluster);
+        curCluster = FAT::read(stream, fatAddress);
     }
-    if (nextCluster != FAT_FILE_END) {
+    fatAddress = mFS->clusterToFatAddress(curCluster);
+    int lastLabel = FAT::read(stream, fatAddress);
+    if (lastLabel != FAT_FILE_END) {
         FAT::write(stream, fatAddress, FAT_BAD_CLUSTER);
         throw std::runtime_error(CORRUPTED_FS_ERROR);
     }
-    dataAddressFrom = mFS->clusterToDataAddress(nextCluster);
+    dataAddressFrom = mFS->clusterToDataAddress(curCluster);
     stream.seekp(dataAddressFrom);
     stream.read(clusterBfr, clusterSize);
+
     dataAddressTo = mFS->clusterToDataAddress(clusters.back());
     stream.seekp(dataAddressTo);
     stream.write(clusterBfr, clusterSize);
