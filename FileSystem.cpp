@@ -163,7 +163,7 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
     std::ifstream f_in(fileName, std::ios::binary | std::ios::in);
     if (f_in.is_open())
         try {
-            this->read(f_in);
+            this->readVFS(f_in);
         } catch (...) {
             std::cerr << "An error occurred during the loading process.\n"
                          "Input file might be corrupted." << std::endl;
@@ -172,27 +172,15 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
         this->formatFS();
 }
 
-void FileSystem::write(std::ofstream &f, bool wipeData) {
-    this->mBootSector.write(f);
-
-    if (wipeData) {
-        f.seekp(this->mBootSector.mDataStartAddress); // jump to root dir (skip FAT tables)
-
-        DirectoryEntry rootDir{std::string("."), false, 0, 0};
-        DirectoryEntry rootDir2{std::string(".."), false, 0, 0}; // do i need it? todo
-        rootDir.write(f);
-        rootDir2.write(f);
-        this->mWorkingDirectory = rootDir;
-
-        // Wipe each data cluster
-        char wipedCluster[CLUSTER_SIZE] = {'\00'};
-        for (int i = 0; i < this->mBootSector.mClusterCount - 1; i++) { // -1 for root entry.
-            writeToStream(f, wipedCluster, CLUSTER_SIZE);
-        }
-    }
+void FileSystem::read() {
+    this->mStream.open(this->mFileName, std::ios::binary | std::ios::in);
 }
 
-void FileSystem::read(std::ifstream &f) {
+void FileSystem::write() {
+    this->mStream.open(this->mFileName, std::ios::binary | std::ios::out);
+}
+
+void FileSystem::readVFS(std::ifstream &f) {
     this->mBootSector.read(f);
     f.seekg(this->mBootSector.mDataStartAddress);
     this->mWorkingDirectory.read(f);
@@ -208,16 +196,29 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 }
 
 void FileSystem::formatFS(int size) {
-    this->mBootSector = BootSector{size};
-
     std::ofstream stream{this->mFileName, std::ios::binary | std::ios::out};
 
     if (!stream.is_open()) {
         throw std::runtime_error(FS_OPEN_ERROR);
     }
 
-    // Clean boot-sector and root directory
-    this->write(stream, true);
+    // Write boot-sector
+    this->mBootSector = BootSector{size};
+    this->mBootSector.write(stream);
+
+    // Clean root directory
+    stream.seekp(this->mBootSector.mDataStartAddress); // jump to root dir (skip FAT tables)
+    DirectoryEntry rootDir{std::string("."), false, 0, 0};
+    DirectoryEntry rootDir2{std::string(".."), false, 0, 0}; // do i need it? todo
+    rootDir.write(stream);
+    rootDir2.write(stream);
+    this->mWorkingDirectory = rootDir;
+
+    // Wipe each data cluster
+    char wipedCluster[CLUSTER_SIZE] = {'\00'};
+    for (int i = 0; i < this->mBootSector.mClusterCount - 1; i++) { // -1 for root entry.
+        writeToStream(stream, wipedCluster, CLUSTER_SIZE);
+    }
 
     // Wipe FAT tables
     FAT::wipe(stream, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
@@ -232,25 +233,6 @@ int FileSystem::clusterToDataAddress(int cluster) const {
 
 int FileSystem::clusterToFatAddress(int cluster) const {
     return this->mBootSector.mFat1StartAddress + cluster * static_cast<int32_t>(sizeof(int32_t));
-}
-
-
-int FileSystem::getDirectoryNextFreeEntryAddress(int cluster) const {
-    std::ifstream stream(this->mFileName, std::ios::binary);
-    auto address = this->clusterToDataAddress(cluster);
-    stream.seekg(address);
-
-    DirectoryEntry temp{};
-    for (int entriesCount = 0; entriesCount < MAX_ENTRIES; entriesCount++) {
-        temp.read(stream);
-        if (!isAllocatedDirectoryEntry(temp.mItemName)) {
-            if (entriesCount < DEFAULT_DIR_SIZE)
-                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
-            return address + entriesCount * DirectoryEntry::SIZE;
-        }
-    }
-    stream.close();
-    throw std::runtime_error(DE_LIMIT_REACHED_ERROR);
 }
 
 /**

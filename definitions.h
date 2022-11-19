@@ -29,7 +29,7 @@ const std::string DE_MISSING_REFERENCES_ERROR{"internal error, directory missing
 const std::string DE_LIMIT_REACHED_ERROR{"internal error, directory file limit reached"};
 const std::string DE_ITEM_NAME_LENGTH_ERROR{"internal error, received invalid (too long) entry name"};
 const std::string CORRUPTED_FS_ERROR{"internal error, file system is corrupted"};
-const std::string FILE_READ_ERROR{"internal error, couldn't read file contents"};
+const std::string FILE_READ_ERROR{"internal error, couldn't readVFS file contents"};
 
 // Runtime recoverable errors (custom)
 const std::string INVALID_DIR_PATH_ERROR{"invalid directory path"};

@@ -11,13 +11,26 @@ void pathCheck(const std::string &path) {
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 }
 
-void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, int directoryCluster, DirectoryEntry &newDE) {
-    std::ofstream stream(fs->mFileName, std::ios::binary);
+int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int cluster) {
+    auto address = fs->clusterToDataAddress(cluster);
+    stream.seekg(address);
 
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
+    DirectoryEntry temp{};
+    for (int entriesCount = 0; entriesCount < MAX_ENTRIES; entriesCount++) {
+        temp.read(stream);
+        if (!isAllocatedDirectoryEntry(temp.mItemName)) {
+            if (entriesCount < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            return address + entriesCount * DirectoryEntry::SIZE;
+        }
+    }
+    stream.close();
+    throw std::runtime_error(DE_LIMIT_REACHED_ERROR);
+}
 
-    int32_t freeParentEntryAddr = fs->getDirectoryNextFreeEntryAddress(directoryCluster);
+void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int directoryCluster,
+                       DirectoryEntry &newDE) {
+    int32_t freeParentEntryAddr = getDirectoryNextFreeEntryAddress(fs, stream, directoryCluster);
     stream.seekp(freeParentEntryAddr);
     newDE.write(stream);
 }
@@ -127,7 +140,7 @@ bool CpCommand::run() {
 
     // Write directory entry
     DirectoryEntry newFileDE{newFileName, true, fileSize, clusters.at(0)};
-    writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newFileDE);
+    writeNewDirectoryEntry(mFS, stream, parentDE.mStartCluster, newFileDE);
     return true;
 }
 
@@ -199,7 +212,7 @@ bool MkdirCommand::run() {
 
     // Update parent directory with the new directory entry
     DirectoryEntry newDE{newDirectoryName, false, 0, newFreeCluster};
-    writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newDE);
+    writeNewDirectoryEntry(mFS, stream, parentDE.mStartCluster, newDE);
 
     // Create new directory "." at new cluster
     seekStreamToDataCluster(mFS, stream, newFreeCluster);
@@ -380,7 +393,6 @@ bool InfoCommand::run() {
         std::cout << de << std::endl;
         return true;
     }
-    int neededClusters = this->mFS->getNeededClustersCount(de.mSize);
 
     std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
 
@@ -426,7 +438,7 @@ bool IncpCommand::run() {
     stream.write((char *) (&mBuffer[fileSize - trailingBytes]), trailingBytes); // todo check on bigger files
 
     DirectoryEntry newFileDE{mOpt1, true, fileSize, clusters.at(0)};
-    writeNewDirectoryEntry(mFS, mDestDE.mStartCluster, newFileDE);
+    writeNewDirectoryEntry(mFS, stream, mDestDE.mStartCluster, newFileDE);
     return true;
 }
 

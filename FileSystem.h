@@ -2,6 +2,7 @@
 #define ZOS_SP_FILESYSTEM_H
 
 #include "definitions.h"
+#include <fstream>
 
 class DirectoryEntry {
 public:
@@ -89,6 +90,7 @@ public:
  * DATA
  */
 class FileSystem {
+    std::fstream mStream;
 public:
     const std::string mFileName;
 
@@ -97,9 +99,11 @@ public:
 
     explicit FileSystem(std::string &fileName);
 
-    void write(std::ofstream &f, bool wipeData = false);
+    void read();
 
-    void read(std::ifstream &f);
+    void write();
+
+    void readVFS(std::ifstream &f);
 
     friend std::ostream &operator<<(std::ostream &os, FileSystem const &fs);
 
@@ -110,8 +114,6 @@ public:
     int clusterToFatAddress(int cluster) const;
 
     bool getDirectory(int cluster, DirectoryEntry &de);
-
-    int getDirectoryNextFreeEntryAddress(int cluster) const;
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
 
