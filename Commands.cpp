@@ -225,15 +225,20 @@ bool PwdCommand::run() {
         safetyCounter++;
         if (safetyCounter > MAX_ENTRIES)
             throw std::runtime_error(CORRUPTED_FS_ERROR);
+
         if (childCluster == 0) break;
-        if (this->mFS->findDirectoryEntry(childCluster, "..", de)) {
-            parentCluster = de.mStartCluster;
-            this->mFS->findDirectoryEntry(parentCluster, childCluster, de);
-            childCluster = parentCluster;
-            fileNames.push_back(de.mItemName);
-        } else {
+
+        if (!this->mFS->findDirectoryEntry(childCluster, "..", de))
             throw std::runtime_error(CORRUPTED_FS_ERROR);
-        }
+
+        parentCluster = de.mStartCluster;
+
+        if (!this->mFS->findDirectoryEntry(parentCluster, childCluster, de))
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
+
+        childCluster = parentCluster;
+
+        fileNames.push_back(de.mItemName);
     }
     for (auto it = fileNames.rbegin(); it != fileNames.rend(); ++it) {
         std::cout << "/" << it->c_str();
@@ -290,7 +295,6 @@ bool FormatCommand::run() {
 
 bool FormatCommand::validate_arguments() {
     if (this->mOptCount != 1) return false;
-    //    eraseAllSubString(this->mOpt1, allowedFormats[0]);
 
     std::transform(this->mOpt1.begin(), this->mOpt1.end(), this->mOpt1.begin(),
                    [](unsigned char c) { return std::toupper(c); });
