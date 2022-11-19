@@ -17,10 +17,8 @@ void seekStreamToDataCluster(std::shared_ptr<FileSystem> &fs, std::fstream &stre
 }
 
 int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, int cluster) {
+    std::ifstream stream(fs->mFileName, std::ios::binary);
     auto address = fs->clusterToDataAddress(cluster);
-
-    std::ifstream stream{fs->mFileName, std::ios::binary};
-
     stream.seekg(address);
 
     DirectoryEntry temp{};
@@ -32,28 +30,26 @@ int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, int cluste
             return address + entriesCount * DirectoryEntry::SIZE;
         }
     }
-    stream.close();
     throw std::runtime_error(DE_LIMIT_REACHED_ERROR);
 }
 
-void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, int directoryCluster,
-                            DirectoryEntry &newDE) {
+void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, int directoryCluster, DirectoryEntry &newDE) {
     int32_t freeParentEntryAddr = getDirectoryNextFreeEntryAddress(fs, directoryCluster);
 
-    std::ofstream stream{fs->mFileName, std::ios::binary};
+    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::ate);
     stream.seekp(freeParentEntryAddr);
     newDE.write(stream);
 }
 
 void writeToFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster, int label) {
     int address = fs->clusterToFatAddress(cluster);
-    std::ofstream stream{fs->mFileName, std::ios::binary};
+    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::ate);
     FAT::write(stream, address, label);
 }
 
 int readFromFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster) {
     int address = fs->clusterToFatAddress(cluster);
-    std::ifstream stream{fs->mFileName, std::ios::binary};
+    std::ifstream stream(fs->mFileName, std::ios::binary);
     return FAT::read(stream, address);
 }
 
@@ -218,8 +214,9 @@ bool MkdirCommand::run() {
     writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newDE);
 
     // Create new directory "." at new cluster
-    std::fstream stream(mFS->mFileName, std::ios::out | std::ios::binary);
-    seekStreamToDataCluster(mFS, stream, newFreeCluster);
+    std::ofstream stream(mFS->mFileName, std::ios::binary | std::ios::ate);
+    int32_t address = mFS->clusterToDataAddress(newFreeCluster);
+    stream.seekp(address);
     newDE.mItemName = ".";
     newDE.write(stream);
 
@@ -275,7 +272,7 @@ bool LsCommand::run() {
     }
 
     // Get filenames
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in); // todo
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::ate); // todo
     seekStreamToDataCluster(mFS, stream, parentDE.mStartCluster);
 
     std::vector<std::string> fileNames{};
@@ -399,8 +396,6 @@ bool InfoCommand::run() {
         return true;
     }
 
-//    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
-
     auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
 
     for (auto it{clusters.begin()}; it != std::prev(clusters.end()); it++) {
@@ -455,7 +450,7 @@ bool IncpCommand::validate_arguments() {
     // Input file check
     pathCheck(mOpt1);
 
-    std::ifstream stream(mOpt1, std::ios::binary | std::ios::ate);
+    std::ifstream stream(mOpt1, std::ios::binary);
 
     if (!stream.good())
         throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
