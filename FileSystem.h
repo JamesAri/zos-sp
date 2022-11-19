@@ -76,7 +76,7 @@ public:
 
     static void wipe(std::ostream &f, int32_t startAddress, int32_t size);
 
-    static int getFreeCluster(std::istream &f, const BootSector &bs);
+    static std::vector<int> getFreeClusters(std::istream &f, const BootSector &bs, int count = 1);
 };
 
 /**
@@ -120,6 +120,8 @@ public:
     bool removeDirectoryEntry(int parentCluster, const std::string &itemName);
 
     int getDirectoryEntryCount(int cluster);
+
+    int getNeededClustersCount(int fileSize) const;
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
