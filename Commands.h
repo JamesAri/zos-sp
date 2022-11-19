@@ -298,7 +298,7 @@ private:
 
 /**
 Načte soubor z pevného disku, ve kterém budou jednotlivé příkazy, a začne je sekvenčně
-vykonávat. Formát je 1 příkaz/1řádek
+vykonávat. Formát je 1příkaz/1řádek
 load s1
 Možný výsledek:
 OK

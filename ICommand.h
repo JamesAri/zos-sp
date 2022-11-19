@@ -15,6 +15,7 @@ public:
     InvalidOptionException() : mErrMsg("invalid option(s)") {}
 
     explicit InvalidOptionException(std::string &&errMsg) : mErrMsg(errMsg) {}
+    explicit InvalidOptionException(const std::string &errMsg) : mErrMsg(errMsg) {}
 
     const char *what() const _NOEXCEPT override {
         return this->mErrMsg.c_str();

@@ -31,7 +31,7 @@ bool RmCommand::validate_arguments() {
 
 bool MkdirCommand::run() {
     if (this->mAccumulator.empty())
-        throw std::runtime_error("internal error, received empty path accumulator");
+        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
 
     auto newDirectoryName = this->mAccumulator.back();
 
@@ -45,13 +45,13 @@ bool MkdirCommand::run() {
             if (this->mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
                 curCluster = parentDE.mStartCluster;
             } else {
-                throw InvalidOptionException("PATH NOT FOUND");
+                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
             }
         }
     }
 
     if (this->mFS->findDirectoryEntry(parentDE.mStartCluster, newDirectoryName, parentDE))
-        throw InvalidOptionException("EXIST");
+        throw InvalidOptionException(EXIST_ERROR);
 
     std::fstream stream(this->mFS->mFileName, std::ios::in | std::ios::out | std::ios::binary);
 
@@ -86,7 +86,7 @@ bool MkdirCommand::validate_arguments() {
     if (this->mOptCount != 1) return false;
 
     if (!validateFilePath(this->mOpt1))
-        throw InvalidOptionException("invalid directory path");
+        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 
     this->mAccumulator = split(this->mOpt1, "/");
     auto newDirectoryName = this->mAccumulator.back();
@@ -97,10 +97,10 @@ bool MkdirCommand::validate_arguments() {
 bool RmdirCommand::run() {
     DirectoryEntry de{};
     if (!this->mFS->findDirectoryEntry(this->mFS->mWorkingDirectory.mStartCluster, this->mOpt1, de))
-        throw InvalidOptionException("FILE NOT FOUND");
+        throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
 
     if (this->mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
-        throw InvalidOptionException("NOT EMPTY");
+        throw InvalidOptionException(NOT_EMPTY_ERROR);
     // move implementation here? todo
     return this->mFS->removeDirectoryEntry(this->mFS->mWorkingDirectory.mStartCluster, this->mOpt1);
 }
@@ -123,7 +123,7 @@ bool LsCommand::run() {
             if (this->mFS->findDirectoryEntry(curCluster, it, parentDE)) {
                 curCluster = parentDE.mStartCluster;
             } else {
-                throw InvalidOptionException("PATH NOT FOUND");
+                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
             }
         }
     }
@@ -160,7 +160,7 @@ bool LsCommand::validate_arguments() {
     if (this->mOptCount != 1) return false;
 
     if (!validateFilePath(this->mOpt1))
-        throw InvalidOptionException("invalid directory path");
+        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 
     this->mAccumulator = split(this->mOpt1, "/");
     return true;
@@ -176,7 +176,7 @@ bool CatCommand::validate_arguments() {
 
 bool CdCommand::run() {
     if (this->mAccumulator.empty())
-        throw std::runtime_error("internal error, received empty path accumulator");
+        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
 
     DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
 
@@ -187,7 +187,7 @@ bool CdCommand::run() {
         if (this->mFS->findDirectoryEntry(curCluster, it, parentDE)) {
             curCluster = parentDE.mStartCluster;
         } else {
-            throw InvalidOptionException("PATH NOT FOUND");
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
         }
     }
     if (!strcmp(parentDE.mItemName.c_str(), "..") || !strcmp(parentDE.mItemName.c_str(), ".")) {
@@ -202,7 +202,7 @@ bool CdCommand::validate_arguments() {
     if (this->mOptCount != 1) return false;
 
     if (!validateFilePath(this->mOpt1))
-        throw InvalidOptionException("invalid directory path");
+        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 
     this->mAccumulator = split(this->mOpt1, "/");
     return true;
@@ -218,9 +218,8 @@ bool PwdCommand::run() {
 
     DirectoryEntry de = this->mFS->mWorkingDirectory;
 
-    int safetyCounter = 0;
     int childCluster = de.mStartCluster, parentCluster;
-
+    int safetyCounter = 0;
     while (true) {
         safetyCounter++;
         if (safetyCounter > MAX_ENTRIES)
@@ -264,7 +263,14 @@ bool IncpCommand::run() {
 }
 
 bool IncpCommand::validate_arguments() {
-    return this->mOptCount == 2;
+    if(this->mOptCount != 2) return false;
+    std::ifstream stream(this->mOpt1);
+    if(!stream.good())
+        throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
+    if(!validateFilePath(this->mOpt2))
+        throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+
+    return true;
 }
 
 bool OutcpCommand::run() {
@@ -304,11 +310,13 @@ bool FormatCommand::validate_arguments() {
     auto pos = this->mOpt1.find(allowedFormats[0]);
 
     if (pos == std::string::npos)
-        throw InvalidOptionException("CANNOT CREATE FILE (wrong unit)");
+        throw InvalidOptionException(CANNOT_CREATE_FILE_ERROR + " (wrong unit)");
 
     this->mOpt1.erase(pos, allowedFormats[0].length());
+
     if (!is_number(this->mOpt1))
-        throw InvalidOptionException("CANNOT CREATE FILE (not a number)");
+        throw InvalidOptionException(CANNOT_CREATE_FILE_ERROR + " (not a number)");
+
     return true;
 }
 

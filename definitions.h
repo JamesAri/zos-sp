@@ -20,12 +20,21 @@ constexpr auto CLUSTER_SIZE = 512 * 8;
 constexpr auto ITEM_NAME_LENGTH = 12; // with EOF
 constexpr auto DEFAULT_DIR_SIZE = 2; // '.' and '..' references
 
-// fatal errors
+// Runtime fatal errors
 const std::string FS_OPEN_ERROR{"internal error, couldn't open file system file"};
 const std::string DE_MISSING_REFERENCES_ERROR{"internal error, directory missing references"};
 const std::string DE_LIMIT_REACHED_ERROR{"internal error, directory file count reached"};
 const std::string DE_ITEM_NAME_LENGTH_ERROR{"internal error, received invalid (too long) entry name"};
 const std::string CORRUPTED_FS_ERROR{"internal error, filesystem is corrupted"};
+const std::string EMPTY_ACCUMULATOR_ERROR{"internal error, received empty path accumulator"};
+
+// Runtime recoverable errors
+const std::string INVALID_DIR_PATH_ERROR{"invalid directory path"};
+const std::string PATH_NOT_FOUND_ERROR{"PATH NOT FOUND"};
+const std::string FILE_NOT_FOUND_ERROR{"FILE NOT FOUND"};
+const std::string CANNOT_CREATE_FILE_ERROR{"CANNOT CREATE FILE"};
+const std::string EXIST_ERROR{"EXIST"};
+const std::string NOT_EMPTY_ERROR{"NOT EMPTY"};
 
 
 #endif //ZOS_SP_DEFINITIONS_H
