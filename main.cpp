@@ -16,13 +16,13 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
 
     switch (getCommandCode(command)) {
         case ECommands::eCpCommand:
-            CpCommand(options).process();
+            CpCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eMvCommand:
-            MvCommand(options).process();
+            MvCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eRmCommand:
-            RmCommand(options).process();
+            RmCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eMkdirCommand:
             MkdirCommand(options).registerFS(pFS).process();
@@ -34,7 +34,7 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             LsCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eCatCommand:
-            CatCommand(options).process();
+            CatCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eCdCommand:
             CdCommand(options).registerFS(pFS).process();
@@ -43,13 +43,13 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             PwdCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eInfoCommand:
-            InfoCommand(options).process();
+            InfoCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eIncpCommand:
             IncpCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eOutcpCommand:
-            OutcpCommand(options).process();
+            OutcpCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eLoadCommand:
             LoadCommand(options).process();
@@ -58,7 +58,7 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             FormatCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eDefragCommand:
-            DefragCommand(options).process();
+            DefragCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eExitCommand:
             return false;

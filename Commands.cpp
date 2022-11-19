@@ -7,43 +7,19 @@
 #include <cmath>
 
 bool CpCommand::run() {
-    return true;
-}
-
-bool CpCommand::validate_arguments() {
-    return this->mOptCount == 2;
-}
-
-bool MvCommand::run() {
-    return true;
-}
-
-bool MvCommand::validate_arguments() {
-    return this->mOptCount == 2;
-}
-
-bool RmCommand::run() {
-    return true;
-}
-
-bool RmCommand::validate_arguments() {
-    return this->mOptCount == 2;
-}
-
-bool MkdirCommand::run() {
-    if (this->mAccumulator.empty())
+    if (mAccumulator.empty())
         throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
 
-    auto newDirectoryName = this->mAccumulator.back();
+    auto newFileName = mAccumulator.back();
 
-    DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
+    DirectoryEntry parentDE = mFS->mWorkingDirectory;
 
-    if (this->mAccumulator.size() > 1) {
+    if (mAccumulator.size() > 1) {
         int curCluster = parentDE.mStartCluster;
         // Iterates over all directory entries (file names) in accumulator except the last entry, which is
         // directory to create. If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
-        for (auto it{this->mAccumulator.begin()}; it != std::prev(this->mAccumulator.end()); it++) {
-            if (this->mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
+        for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
+            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
                 curCluster = parentDE.mStartCluster;
             } else {
                 throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
@@ -51,24 +27,159 @@ bool MkdirCommand::run() {
         }
     }
 
-    if (this->mFS->findDirectoryEntry(parentDE.mStartCluster, newDirectoryName, parentDE))
-        throw InvalidOptionException(EXIST_ERROR);
+    if (mFS->findDirectoryEntry(parentDE.mStartCluster, newFileName, parentDE)) // exists -> delete
+        mFS->removeDirectoryEntry(parentDE.mStartCluster, newFileName);
 
-    std::fstream stream(this->mFS->mFileName, std::ios::in | std::ios::out | std::ios::binary);
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
 
     if (!stream.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
 
-    int32_t newFreeCluster = FAT::getFreeCluster(stream, this->mFS->mBootSector);
+    int clusterSize = mFS->mBootSector.mClusterSize;
+    int fileSize = mFromDE.mSize;
+    int neededClusters = std::ceil(fileSize / static_cast<double>(clusterSize));
+    int trailingBytes = fileSize % clusterSize;
+
+    // Get free clusters
+    std::vector<int> clusters{};
+    for (int i = 0; i < neededClusters; i++) {
+        clusters.push_back(FAT::getFreeCluster(stream, mFS->mBootSector));
+    }
+
+    // Mark clusters in FAT tables
+    for (int i = 0; i < clusters.size() - 1; i++) {
+        int address = mFS->clusterToFatAddress(clusters.at(i));
+        FAT::write(stream, address, clusters.at(i + 1));
+    }
+    FAT::write(stream, mFS->clusterToFatAddress(clusters.back()), FAT_FILE_END);
+
+    // Move data
+    int nextCluster = mFromDE.mStartCluster, dataAddressFrom, dataAddressTo, fatAddress;
+    char clusterBfr[clusterSize];
+    for (int i = 0; i < clusters.size() - 1; i++) {
+        if (nextCluster == FAT_UNUSED || nextCluster == FAT_FILE_END || nextCluster == FAT_BAD_CLUSTER) {
+            FAT::write(stream, fatAddress, FAT_BAD_CLUSTER);
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
+        }
+
+        dataAddressFrom = mFS->clusterToDataAddress(nextCluster);
+        stream.seekp(dataAddressFrom);
+        stream.read(clusterBfr, clusterSize);
+        dataAddressTo = mFS->clusterToDataAddress(clusters.at(i));
+        stream.seekp(dataAddressTo);
+        stream.write(clusterBfr, clusterSize);
+
+        fatAddress = mFS->clusterToFatAddress(nextCluster);
+        nextCluster = FAT::read(stream, fatAddress);
+    }
+    if (nextCluster != FAT_FILE_END) {
+        FAT::write(stream, fatAddress, FAT_BAD_CLUSTER);
+        throw std::runtime_error(CORRUPTED_FS_ERROR);
+    }
+    dataAddressFrom = mFS->clusterToDataAddress(nextCluster);
+    stream.seekp(dataAddressFrom);
+    stream.read(clusterBfr, clusterSize);
+    dataAddressTo = mFS->clusterToDataAddress(clusters.back());
+    stream.seekp(dataAddressTo);
+    stream.write(clusterBfr, clusterSize);
+
+    // Write directory entry
+    auto entryAddress = mFS->getDirectoryNextFreeEntryAddress(parentDE.mStartCluster);
+    stream.seekp(entryAddress);
+    DirectoryEntry newFileDE{};
+    newFileDE.mItemName = newFileName;
+    newFileDE.mIsFile = true;
+    newFileDE.mStartCluster = clusters.at(0);
+    newFileDE.mSize = fileSize;
+    newFileDE.write(stream);
+
+    return true;
+}
+
+bool CpCommand::validate_arguments() {
+    if (mOptCount != 2) return false;
+
+    // FS path check
+    if (!validateFilePath(mOpt1))
+        throw InvalidOptionException(INVALID_DIR_PATH_ERROR + " (first argument)");
+
+    if (!validateFilePath(mOpt2))
+        throw InvalidOptionException(INVALID_DIR_PATH_ERROR + " (second argument)");
+
+    auto fileNames = split(mOpt1, "/");
+    DirectoryEntry fromDE{};
+    int curCluster = mFS->mWorkingDirectory.mStartCluster;
+    for (auto &it: fileNames) {
+        if (mFS->findDirectoryEntry(curCluster, it, fromDE)) {
+            curCluster = fromDE.mStartCluster;
+        } else {
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR + " (first argument)");
+        }
+    }
+
+    if (!fromDE.mIsFile)
+        throw InvalidOptionException("cannot copy directory");
+
+    mFromDE = fromDE;
+    mAccumulator = split(mOpt2, "/");
+    return true;
+}
+
+bool MvCommand::run() {
+    return true;
+}
+
+bool MvCommand::validate_arguments() {
+    return mOptCount == 2;
+}
+
+bool RmCommand::run() {
+    return true;
+}
+
+bool RmCommand::validate_arguments() {
+    return mOptCount == 2;
+}
+
+bool MkdirCommand::run() {
+    if (mAccumulator.empty())
+        throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
+
+    auto newDirectoryName = mAccumulator.back();
+
+    DirectoryEntry parentDE = mFS->mWorkingDirectory;
+
+    if (mAccumulator.size() > 1) {
+        int curCluster = parentDE.mStartCluster;
+        // Iterates over all directory entries (file names) in accumulator except the last entry, which is
+        // directory to create. If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
+        for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
+            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
+                curCluster = parentDE.mStartCluster;
+            } else {
+                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+            }
+        }
+    }
+
+    if (mFS->findDirectoryEntry(parentDE.mStartCluster, newDirectoryName, parentDE))
+        throw InvalidOptionException(EXIST_ERROR);
+
+    std::fstream stream(mFS->mFileName, std::ios::in | std::ios::out | std::ios::binary);
+
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
+
+    int32_t newFreeCluster = FAT::getFreeCluster(stream, mFS->mBootSector);
 
     // Update parent directory with the new directory entry
     DirectoryEntry newDE{newDirectoryName, false, 0, newFreeCluster};
-    int32_t freeParentEntryAddr = this->mFS->getDirectoryNextFreeEntryAddress(parentDE.mStartCluster);
+    int32_t freeParentEntryAddr = mFS->getDirectoryNextFreeEntryAddress(parentDE.mStartCluster);
     stream.seekp(freeParentEntryAddr);
     newDE.write(stream);
 
     // Create new directory "." at new cluster
-    int32_t newDEAddress = this->mFS->clusterToDataAddress(newFreeCluster);
+    int32_t newDEAddress = mFS->clusterToDataAddress(newFreeCluster);
     stream.seekp(newDEAddress);
     newDE.mItemName = ".";
     newDE.write(stream);
@@ -78,50 +189,50 @@ bool MkdirCommand::run() {
     parentDE.write(stream);
 
     // All went ok, label new cluster as allocated
-    int32_t fatNewClusterAddress = this->mFS->clusterToFatAddress(newFreeCluster);
+    int32_t fatNewClusterAddress = mFS->clusterToFatAddress(newFreeCluster);
     FAT::write(stream, fatNewClusterAddress, FAT_FILE_END);
     return true;
 }
 
 bool MkdirCommand::validate_arguments() {
-    if (this->mOptCount != 1) return false;
+    if (mOptCount != 1) return false;
 
-    if (!validateFilePath(this->mOpt1))
+    if (!validateFilePath(mOpt1))
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 
-    this->mAccumulator = split(this->mOpt1, "/");
-    auto newDirectoryName = this->mAccumulator.back();
+    mAccumulator = split(mOpt1, "/");
+    auto newDirectoryName = mAccumulator.back();
 
     return true;
 }
 
 bool RmdirCommand::run() {
     DirectoryEntry de{};
-    if (!this->mFS->findDirectoryEntry(this->mFS->mWorkingDirectory.mStartCluster, this->mOpt1, de))
+    if (!mFS->findDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1, de))
         throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
 
-    if (this->mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
+    if (mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
         throw InvalidOptionException(NOT_EMPTY_ERROR);
     // move implementation here? todo
-    return this->mFS->removeDirectoryEntry(this->mFS->mWorkingDirectory.mStartCluster, this->mOpt1);
+    return mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1);
 }
 
 bool RmdirCommand::validate_arguments() {
-    if (this->mOptCount != 1) return false;
-    return validateFileName(this->mOpt1);
+    if (mOptCount != 1) return false;
+    return validateFileName(mOpt1);
 }
 
 bool LsCommand::run() {
     // Resolve path
 
-    DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
+    DirectoryEntry parentDE = mFS->mWorkingDirectory;
 
-    if (!this->mAccumulator.empty()) {
+    if (!mAccumulator.empty()) {
         int curCluster = parentDE.mStartCluster;
         // Iterates over all directory entries (file names) in accumulator.
         // If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
-        for (auto &it: this->mAccumulator) {
-            if (this->mFS->findDirectoryEntry(curCluster, it, parentDE)) {
+        for (auto &it: mAccumulator) {
+            if (mFS->findDirectoryEntry(curCluster, it, parentDE)) {
                 curCluster = parentDE.mStartCluster;
             } else {
                 throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
@@ -130,12 +241,12 @@ bool LsCommand::run() {
     }
 
     // Get filenames
-    std::ifstream stream(this->mFS->mFileName, std::ios::binary);
+    std::ifstream stream(mFS->mFileName, std::ios::binary);
 
     if (!stream.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
 
-    auto address = this->mFS->clusterToDataAddress(parentDE.mStartCluster);
+    auto address = mFS->clusterToDataAddress(parentDE.mStartCluster);
     stream.seekg(address);
 
     std::vector<std::string> fileNames{};
@@ -157,13 +268,13 @@ bool LsCommand::run() {
 }
 
 bool LsCommand::validate_arguments() {
-    if (this->mOptCount == 0) return true;
-    if (this->mOptCount != 1) return false;
+    if (mOptCount == 0) return true;
+    if (mOptCount != 1) return false;
 
-    if (!validateFilePath(this->mOpt1))
+    if (!validateFilePath(mOpt1))
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 
-    this->mAccumulator = split(this->mOpt1, "/");
+    mAccumulator = split(mOpt1, "/");
     return true;
 }
 
@@ -172,52 +283,52 @@ bool CatCommand::run() {
 }
 
 bool CatCommand::validate_arguments() {
-    return this->mOptCount == 1;
+    return mOptCount == 1;
 }
 
 bool CdCommand::run() {
-    if (this->mAccumulator.empty())
+    if (mAccumulator.empty())
         throw std::runtime_error(EMPTY_ACCUMULATOR_ERROR);
 
-    DirectoryEntry parentDE = this->mFS->mWorkingDirectory;
+    DirectoryEntry parentDE = mFS->mWorkingDirectory;
 
     int curCluster = parentDE.mStartCluster;
     // Iterates over all directory entries (file names) in accumulator.
     // If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
-    for (auto &it: this->mAccumulator) {
-        if (this->mFS->findDirectoryEntry(curCluster, it, parentDE)) {
+    for (auto &it: mAccumulator) {
+        if (mFS->findDirectoryEntry(curCluster, it, parentDE)) {
             curCluster = parentDE.mStartCluster;
         } else {
             throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
         }
     }
     if (!strcmp(parentDE.mItemName.c_str(), "..") || !strcmp(parentDE.mItemName.c_str(), ".")) {
-        if (!this->mFS->getDirectory(parentDE.mStartCluster, parentDE))
+        if (!mFS->getDirectory(parentDE.mStartCluster, parentDE))
             throw std::runtime_error(CORRUPTED_FS_ERROR);
     }
-    this->mFS->mWorkingDirectory = parentDE;
+    mFS->mWorkingDirectory = parentDE;
     return true;
 }
 
 bool CdCommand::validate_arguments() {
-    if (this->mOptCount != 1) return false;
+    if (mOptCount != 1) return false;
 
-    if (!validateFilePath(this->mOpt1))
+    if (!validateFilePath(mOpt1))
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 
-    this->mAccumulator = split(this->mOpt1, "/");
+    mAccumulator = split(mOpt1, "/");
     return true;
 }
 
 bool PwdCommand::run() {
-    if (this->mFS->mWorkingDirectory.mStartCluster == 0) {
+    if (mFS->mWorkingDirectory.mStartCluster == 0) {
         std::cout << "/" << std::endl;
         return true;
     }
 
     std::vector<std::string> fileNames{};
 
-    DirectoryEntry de = this->mFS->mWorkingDirectory;
+    DirectoryEntry de = mFS->mWorkingDirectory;
 
     int childCluster = de.mStartCluster, parentCluster;
     int safetyCounter = 0;
@@ -228,12 +339,12 @@ bool PwdCommand::run() {
 
         if (childCluster == 0) break;
 
-        if (!this->mFS->findDirectoryEntry(childCluster, "..", de))
+        if (!mFS->findDirectoryEntry(childCluster, "..", de))
             throw std::runtime_error(CORRUPTED_FS_ERROR);
 
         parentCluster = de.mStartCluster;
 
-        if (!this->mFS->findDirectoryEntry(parentCluster, childCluster, de))
+        if (!mFS->findDirectoryEntry(parentCluster, childCluster, de))
             throw std::runtime_error(CORRUPTED_FS_ERROR);
 
         childCluster = parentCluster;
@@ -248,7 +359,7 @@ bool PwdCommand::run() {
 }
 
 bool PwdCommand::validate_arguments() {
-    return this->mOptCount == 0;
+    return mOptCount == 0;
 }
 
 bool InfoCommand::run() {
@@ -256,46 +367,46 @@ bool InfoCommand::run() {
 }
 
 bool InfoCommand::validate_arguments() {
-    return this->mOptCount == 1;
+    return mOptCount == 1;
 }
 
 bool IncpCommand::run() {
-    std::fstream stream(this->mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
+    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
 
     if (!stream.is_open())
         throw std::runtime_error(FS_OPEN_ERROR);
 
-    int clusterSize = this->mFS->mBootSector.mClusterSize;
-    int fileSize = static_cast<int>(this->mBuffer.size());
+    int clusterSize = mFS->mBootSector.mClusterSize;
+    int fileSize = static_cast<int>(mBuffer.size());
     int neededClusters = std::ceil(fileSize / static_cast<double>(clusterSize));
     int trailingBytes = fileSize % clusterSize;
 
     // Get free clusters
     std::vector<int> clusters{};
     for (int i = 0; i < neededClusters; i++) {
-        clusters.push_back(FAT::getFreeCluster(stream, this->mFS->mBootSector));
+        clusters.push_back(FAT::getFreeCluster(stream, mFS->mBootSector));
     }
 
     // Mark clusters in FAT tables
     for (int i = 0; i < clusters.size() - 1; i++) {
-        int address = this->mFS->clusterToFatAddress(clusters.at(i));
+        int address = mFS->clusterToFatAddress(clusters.at(i));
         FAT::write(stream, address, clusters.at(i + 1));
     }
-    FAT::write(stream, this->mFS->clusterToFatAddress(clusters.back()), FAT_FILE_END);
+    FAT::write(stream, mFS->clusterToFatAddress(clusters.back()), FAT_FILE_END);
 
     // Move data
     for (int i = 0; i < clusters.size() - 1; i++) {
-        int address = this->mFS->clusterToDataAddress(clusters.at(i));
+        int address = mFS->clusterToDataAddress(clusters.at(i));
         stream.seekp(address);
-        stream.write((char*)(&this->mBuffer[i * clusterSize]), clusterSize);
+        stream.write((char *) (&mBuffer[i * clusterSize]), clusterSize);
     }
-    stream.seekp(this->mFS->clusterToDataAddress(clusters.back()));
-    stream.write((char*)(&this->mBuffer[fileSize - trailingBytes]), trailingBytes); // todo check on bigger files
+    stream.seekp(mFS->clusterToDataAddress(clusters.back()));
+    stream.write((char *) (&mBuffer[fileSize - trailingBytes]), trailingBytes); // todo check on bigger files
 
-    auto entryAddress = this->mFS->getDirectoryNextFreeEntryAddress(this->mDestDE.mStartCluster);
+    auto entryAddress = mFS->getDirectoryNextFreeEntryAddress(mDestDE.mStartCluster);
     stream.seekp(entryAddress);
     DirectoryEntry newFileDE{};
-    newFileDE.mItemName = this->mOpt1;
+    newFileDE.mItemName = mOpt1;
     newFileDE.mIsFile = true;
     newFileDE.mStartCluster = clusters.at(0);
     newFileDE.mSize = fileSize;
@@ -305,13 +416,13 @@ bool IncpCommand::run() {
 }
 
 bool IncpCommand::validate_arguments() {
-    if (this->mOptCount != 2) return false;
+    if (mOptCount != 2) return false;
 
     // Input file check
-    if (!validateFileName(this->mOpt1))
+    if (!validateFileName(mOpt1))
         throw InvalidOptionException(INVALID_FILE_NAME_ERROR);
 
-    std::ifstream stream(this->mOpt1, std::ios::binary | std::ios::ate);
+    std::ifstream stream(mOpt1, std::ios::binary | std::ios::ate);
 
     if (!stream.good())
         throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
@@ -319,29 +430,29 @@ bool IncpCommand::validate_arguments() {
     std::streamsize size = stream.tellg();
     stream.seekg(0, std::ios::beg);
 
-    this->mBuffer = std::vector<char>(size);
-    if (!stream.read(this->mBuffer.data(), size))
+    mBuffer = std::vector<char>(size);
+    if (!stream.read(mBuffer.data(), size))
         throw std::runtime_error(FILE_READ_ERROR);
 
     stream.close();
 
     // FS path check
-    if (!validateFilePath(this->mOpt2))
+    if (!validateFilePath(mOpt2))
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 
-    auto fileNames = split(this->mOpt2, "/");
+    auto fileNames = split(mOpt2, "/");
 
     DirectoryEntry de{};
-    int curCluster = this->mFS->mWorkingDirectory.mStartCluster;
+    int curCluster = mFS->mWorkingDirectory.mStartCluster;
     for (auto &it: fileNames) {
-        if (this->mFS->findDirectoryEntry(curCluster, it, de)) {
+        if (mFS->findDirectoryEntry(curCluster, it, de)) {
             curCluster = de.mStartCluster;
         } else {
             throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
         }
     }
 
-    this->mDestDE = de;
+    mDestDE = de;
     return true;
 }
 
@@ -350,7 +461,7 @@ bool OutcpCommand::run() {
 }
 
 bool OutcpCommand::validate_arguments() {
-    return this->mOptCount == 2;
+    return mOptCount == 2;
 }
 
 bool LoadCommand::run() {
@@ -358,12 +469,12 @@ bool LoadCommand::run() {
 }
 
 bool LoadCommand::validate_arguments() {
-    return this->mOptCount == 1;
+    return mOptCount == 1;
 }
 
 bool FormatCommand::run() {
     try {
-        this->mFS->formatFS(std::stoi(this->mOpt1));
+        mFS->formatFS(std::stoi(mOpt1));
     } catch (...) {
         std::cerr << "internal error, terminating" << std::endl;
         exit(1);
@@ -372,21 +483,21 @@ bool FormatCommand::run() {
 }
 
 bool FormatCommand::validate_arguments() {
-    if (this->mOptCount != 1) return false;
+    if (mOptCount != 1) return false;
 
-    std::transform(this->mOpt1.begin(), this->mOpt1.end(), this->mOpt1.begin(),
+    std::transform(mOpt1.begin(), mOpt1.end(), mOpt1.begin(),
                    [](unsigned char c) { return std::toupper(c); });
 
     std::vector<std::string> allowedFormats{"MB"};
 
-    auto pos = this->mOpt1.find(allowedFormats[0]);
+    auto pos = mOpt1.find(allowedFormats[0]);
 
     if (pos == std::string::npos)
         throw InvalidOptionException(CANNOT_CREATE_FILE_ERROR + " (wrong unit)");
 
-    this->mOpt1.erase(pos, allowedFormats[0].length());
+    mOpt1.erase(pos, allowedFormats[0].length());
 
-    if (!is_number(this->mOpt1))
+    if (!is_number(mOpt1))
         throw InvalidOptionException(CANNOT_CREATE_FILE_ERROR + " (not a number)");
 
     return true;
@@ -397,5 +508,5 @@ bool DefragCommand::run() {
 }
 
 bool DefragCommand::validate_arguments() {
-    return this->mOptCount == 2;
+    return mOptCount == 2;
 }

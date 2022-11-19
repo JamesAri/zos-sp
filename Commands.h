@@ -60,6 +60,9 @@ public:
     using ICommand::registerFS;
 
 private:
+    std::vector<std::string> mAccumulator;
+    DirectoryEntry mFromDE;
+
     bool validate_arguments() override;
 
     bool run() override;
