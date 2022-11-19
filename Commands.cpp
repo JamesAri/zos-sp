@@ -37,8 +37,29 @@ int readFromFatByCluster(std::shared_ptr<FileSystem> &fs, std::fstream &stream, 
     return FAT::read(stream, address);
 }
 
-std::vector<int> getFatClusterChain(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int startingCluster) {
+bool isSpecialLabel(int label) {
+    return label == FAT_UNUSED || label == FAT_FILE_END || label == FAT_BAD_CLUSTER;
+}
 
+std::vector<int>
+getFatClusterChain(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int fromCluster, int fileSize) {
+    int clusterCount = fs->getNeededClustersCount(fileSize);
+
+    if (clusterCount > MAX_ENTRIES)
+        throw std::runtime_error("internal error, incorrect cluster count");
+
+    std::vector<int> clusters{};
+    int curCluster = fromCluster;
+    for (int i = 0; i < clusterCount; i++) {
+        clusters.push_back(curCluster);
+        curCluster = readFromFatByCluster(fs, stream, curCluster);
+        if (isSpecialLabel(curCluster) || curCluster >= fs->mBootSector.mClusterCount) break;
+    }
+    int lastLabel = readFromFatByCluster(fs, stream, curCluster);
+    if (clusters.size() != clusterCount || lastLabel != FAT_FILE_END)
+        throw std::runtime_error("filesystem corrupted"); // todo mark as bad clusters
+
+    return clusters;
 }
 
 bool CpCommand::run() {
@@ -48,8 +69,6 @@ bool CpCommand::run() {
 
     if (mAccumulator.size() > 1) {
         int curCluster = parentDE.mStartCluster;
-        // Iterates over all directory entries (file names) in accumulator except the last entry, which is
-        // directory to create. If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
         for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
             if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
                 curCluster = parentDE.mStartCluster;
@@ -66,10 +85,9 @@ bool CpCommand::run() {
 
     int clusterSize = mFS->mBootSector.mClusterSize;
     int fileSize = mFromDE.mSize;
-    int neededClusters = this->mFS->getNeededClustersCount(fileSize);
 
     // Get free clusters
-    auto clusters = FAT::getFreeClusters(stream, mFS->mBootSector, neededClusters);
+    auto clusters = FAT::getFreeClusters(stream, mFS->mBootSector, fileSize);
 
     // Mark clusters in FAT tables
     for (int i = 0; i < clusters.size() - 1; i++) {
@@ -80,6 +98,7 @@ bool CpCommand::run() {
     // Move data
     int curCluster = mFromDE.mStartCluster;
     char clusterBfr[clusterSize];
+
     for (int i = 0; i < clusters.size() - 1; i++) {
         if (curCluster == FAT_UNUSED
             || curCluster == FAT_FILE_END
@@ -365,16 +384,7 @@ bool InfoCommand::run() {
 
     std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
 
-    curCluster = de.mStartCluster;
-    std::vector<int> clusters{curCluster};
-
-    for (int i = 0; i < neededClusters; i++) {
-        curCluster = readFromFatByCluster(mFS, stream, curCluster);
-        clusters.push_back(curCluster);
-    }
-
-    if (clusters.back() != FAT_FILE_END)
-        throw std::runtime_error(CORRUPTED_FS_ERROR);
+    auto clusters = getFatClusterChain(mFS, stream, de.mStartCluster, de.mSize);
 
     for (auto it{clusters.begin()}; it != std::prev(clusters.end()); it++) {
         std::cout << *it << " ";
@@ -396,11 +406,10 @@ bool IncpCommand::run() {
 
     int clusterSize = mFS->mBootSector.mClusterSize;
     int fileSize = static_cast<int>(mBuffer.size());
-    int neededClusters = this->mFS->getNeededClustersCount(fileSize);
     int trailingBytes = fileSize % clusterSize;
 
     // Get free clusters
-    auto clusters = FAT::getFreeClusters(stream, mFS->mBootSector, neededClusters);
+    auto clusters = FAT::getFreeClusters(stream, mFS->mBootSector, fileSize);
 
     // Mark clusters in FAT tables
     for (int i = 0; i < clusters.size() - 1; i++) {

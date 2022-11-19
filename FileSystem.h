@@ -121,7 +121,7 @@ public:
 
     int getDirectoryEntryCount(int cluster);
 
-    int getNeededClustersCount(int fileSize) const;
+    int getNeededClustersCount(int fileSize);
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;

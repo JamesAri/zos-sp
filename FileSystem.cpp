@@ -81,7 +81,12 @@ void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t size) {
     }
 }
 
-std::vector<int> FAT::getFreeClusters(std::istream &f, const BootSector &bs, int count) {
+std::vector<int> FAT::getFreeClusters(std::istream &f, const BootSector &bs, int fileSize) {
+    int count = std::ceil(fileSize / static_cast<double>(bs.mClusterSize));
+
+    if(count > MAX_ENTRIES)
+        throw std::runtime_error("not enough space, format file system");
+
     f.seekg(bs.mFat1StartAddress);
     int32_t label;
     std::vector<int> clusters{};
@@ -91,8 +96,9 @@ std::vector<int> FAT::getFreeClusters(std::istream &f, const BootSector &bs, int
             clusters.push_back(i);
         }
     }
+
     if (clusters.size() != count)
-        throw std::runtime_error("not enough space");
+        throw std::runtime_error("not enough space, format file system or free some space");
 
     return clusters;
 }
