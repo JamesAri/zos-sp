@@ -46,7 +46,7 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             InfoCommand(options).process();
             break;
         case ECommands::eIncpCommand:
-            IncpCommand(options).process();
+            IncpCommand(options).registerFS(pFS).process();
             break;
         case ECommands::eOutcpCommand:
             OutcpCommand(options).process();

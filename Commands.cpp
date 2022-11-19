@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <cmath>
 
 bool CpCommand::run() {
     return true;
@@ -259,17 +260,88 @@ bool InfoCommand::validate_arguments() {
 }
 
 bool IncpCommand::run() {
+    std::fstream stream(this->mFS->mFileName, std::ios::binary | std::ios::in | std::ios::out);
+
+    if (!stream.is_open())
+        throw std::runtime_error(FS_OPEN_ERROR);
+
+    int clusterSize = this->mFS->mBootSector.mClusterSize;
+    int fileSize = static_cast<int>(this->mBuffer.size());
+    int neededClusters = std::ceil(fileSize / static_cast<double>(clusterSize));
+    int trailingBytes = fileSize % clusterSize;
+
+    // Get free clusters
+    std::vector<int> clusters{};
+    for (int i = 0; i < neededClusters; i++) {
+        clusters.push_back(FAT::getFreeCluster(stream, this->mFS->mBootSector));
+    }
+
+    // Mark clusters in FAT tables
+    for (int i = 0; i < clusters.size() - 1; i++) {
+        int address = this->mFS->clusterToFatAddress(clusters.at(i));
+        FAT::write(stream, address, clusters.at(i + 1));
+    }
+    FAT::write(stream, this->mFS->clusterToFatAddress(clusters.back()), FAT_FILE_END);
+
+    // Move data
+    for (int i = 0; i < clusters.size() - 1; i++) {
+        int address = this->mFS->clusterToDataAddress(clusters.at(i));
+        stream.seekp(address);
+        stream.write((char*)(&this->mBuffer[i * clusterSize]), clusterSize);
+    }
+    stream.seekp(this->mFS->clusterToDataAddress(clusters.back()));
+    stream.write((char*)(&this->mBuffer[fileSize - trailingBytes]), trailingBytes); // todo check on bigger files
+
+    auto entryAddress = this->mFS->getDirectoryNextFreeEntryAddress(this->mDestDE.mStartCluster);
+    stream.seekp(entryAddress);
+    DirectoryEntry newFileDE{};
+    newFileDE.mItemName = this->mOpt1;
+    newFileDE.mIsFile = true;
+    newFileDE.mStartCluster = clusters.at(0);
+    newFileDE.mSize = fileSize;
+    newFileDE.write(stream);
+
     return true;
 }
 
 bool IncpCommand::validate_arguments() {
-    if(this->mOptCount != 2) return false;
-    std::ifstream stream(this->mOpt1);
-    if(!stream.good())
-        throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
-    if(!validateFilePath(this->mOpt2))
-        throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+    if (this->mOptCount != 2) return false;
 
+    // Input file check
+    if (!validateFileName(this->mOpt1))
+        throw InvalidOptionException(INVALID_FILE_NAME_ERROR);
+
+    std::ifstream stream(this->mOpt1, std::ios::binary | std::ios::ate);
+
+    if (!stream.good())
+        throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
+
+    std::streamsize size = stream.tellg();
+    stream.seekg(0, std::ios::beg);
+
+    this->mBuffer = std::vector<char>(size);
+    if (!stream.read(this->mBuffer.data(), size))
+        throw std::runtime_error(FILE_READ_ERROR);
+
+    stream.close();
+
+    // FS path check
+    if (!validateFilePath(this->mOpt2))
+        throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
+
+    auto fileNames = split(this->mOpt2, "/");
+
+    DirectoryEntry de{};
+    int curCluster = this->mFS->mWorkingDirectory.mStartCluster;
+    for (auto &it: fileNames) {
+        if (this->mFS->findDirectoryEntry(curCluster, it, de)) {
+            curCluster = de.mStartCluster;
+        } else {
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+        }
+    }
+
+    this->mDestDE = de;
     return true;
 }
 

@@ -270,6 +270,9 @@ public:
     using ICommand::registerFS;
 
 private:
+    DirectoryEntry mDestDE;
+    std::vector<char> mBuffer;
+
     bool validate_arguments() override;
 
     bool run() override;
