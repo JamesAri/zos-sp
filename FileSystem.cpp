@@ -82,16 +82,15 @@ void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t size) {
 }
 
 std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count) {
-    if(count > MAX_ENTRIES)
+    if (count > MAX_ENTRIES)
         throw std::runtime_error("not enough space, format file system");
 
-    std::ifstream stream{fs->mFileName, std::ios::binary};
-    stream.seekg(fs->mBootSector.mFat1StartAddress);
+    fs->seek(fs->mBootSector.mFat1StartAddress);
 
     int32_t label;
     std::vector<int> clusters{};
     for (int32_t i = 0; i < fs->mBootSector.mClusterCount && clusters.size() < count; i++) {
-        readFromStream(stream, label);
+        readFromStream(fs->mStream, label);
         if (label == FAT_UNUSED) {
             clusters.push_back(i);
         }
@@ -122,7 +121,7 @@ BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
     this->mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
 }
 
-void BootSector::write(std::ofstream &f) {
+void BootSector::write(std::fstream &f) {
     writeToStream(f, this->mSignature, SIGNATURE_LENGTH);
     writeToStream(f, this->mClusterSize);
     writeToStream(f, this->mClusterCount);
@@ -133,7 +132,7 @@ void BootSector::write(std::ofstream &f) {
     writeToStream(f, this->mPaddingSize);
 }
 
-void BootSector::read(std::ifstream &f) {
+void BootSector::read(std::fstream &f) {
     readFromStream(f, this->mSignature, SIGNATURE_LENGTH);
     readFromStream(f, this->mClusterSize);
     readFromStream(f, this->mClusterCount);
@@ -158,24 +157,35 @@ std::ostream &operator<<(std::ostream &os, BootSector const &bs) {
               << "  DataStartAddress: " << bs.mDataStartAddress << "\n";
 }
 
-
-FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
-    std::ifstream f_in(fileName, std::ios::binary | std::ios::in);
-    if (f_in.is_open())
-        try {
-            this->readVFS(f_in);
-        } catch (...) {
-            std::cerr << "An error occurred during the loading process.\n"
-                         "Input file might be corrupted." << std::endl;
-        }
-    else
-        this->formatFS();
+bool fileExists(const std::string &fileName) {
+    std::ifstream stream(fileName);
+    return stream.good();
 }
 
-void FileSystem::readVFS(std::ifstream &f) {
-    this->mBootSector.read(f);
-    f.seekg(this->mBootSector.mDataStartAddress);
-    this->mWorkingDirectory.read(f);
+FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
+    unsigned int mode;
+    bool exists = fileExists(fileName);
+    if (exists)
+        mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::ate;
+    else
+        mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+
+    mStream = std::fstream(mFileName, mode);
+
+    if (exists) {
+        try {
+            mStream.seekg(0, std::ios::beg);
+            readVFS();
+        } catch (...) {
+            std::cerr << "An error occurred during the loading process.\nInput file might be corrupted." << std::endl;
+        }
+    } else formatFS();
+}
+
+void FileSystem::readVFS() {
+    this->mBootSector.read(mStream);
+    seek(this->mBootSector.mDataStartAddress);
+    this->mWorkingDirectory.read(mStream);
 }
 
 std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
@@ -188,63 +198,45 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 }
 
 void FileSystem::formatFS(int size) {
-    std::ofstream stream{this->mFileName, std::ios::binary};
-
-    if (!stream.is_open()) {
-        throw std::runtime_error(FS_OPEN_ERROR);
-    }
-
     // Write boot-sector
     this->mBootSector = BootSector{size};
-    this->mBootSector.write(stream);
+    this->mBootSector.write(mStream);
 
     // Wipe each data cluster
-    stream.seekp(this->mBootSector.mDataStartAddress);
+    seek(this->mBootSector.mDataStartAddress);
     char wipedCluster[CLUSTER_SIZE] = {'\00'};
     for (int i = 0; i < this->mBootSector.mClusterCount; i++) {
-        writeToStream(stream, wipedCluster, CLUSTER_SIZE);
+        writeToStream(mStream, wipedCluster, CLUSTER_SIZE);
     }
 
     // Make root directory
-    stream.seekp(this->mBootSector.mDataStartAddress);
+    seek(this->mBootSector.mDataStartAddress);
     DirectoryEntry rootDir{std::string("."), false, 0, 0};
     DirectoryEntry rootDir2{std::string(".."), false, 0, 0}; // do i need it? todo
-    rootDir.write(stream);
-    rootDir2.write(stream);
+    rootDir.write(mStream);
+    rootDir2.write(mStream);
     this->mWorkingDirectory = rootDir;
 
     // Wipe FAT tables
-    FAT::wipe(stream, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
+    FAT::wipe(mStream, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
 
     // Label root directory cluster in FAT
-    FAT::write(stream, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
+    FAT::write(mStream, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
+    flush();
 }
 
-int FileSystem::clusterToDataAddress(int cluster) const {
-    return this->mBootSector.mDataStartAddress + cluster * this->mBootSector.mClusterSize;
-}
-
-int FileSystem::clusterToFatAddress(int cluster) const {
-    return this->mBootSector.mFat1StartAddress + cluster * static_cast<int32_t>(sizeof(int32_t));
-}
 
 /**
  * @param de Mutates DirectoryEntry only if entry is found, in which case it
  * copies the found data into passed object.
  */
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
-    std::ifstream stream(this->mFileName, std::ios::binary);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
-
-    auto address = this->clusterToDataAddress(cluster);
-    stream.seekg(address);
+    seek(this->clusterToDataAddress(cluster));
 
     DirectoryEntry tempDE{};
     auto itemNameCharArr = itemName.c_str();
     for (int i = 0; i < MAX_ENTRIES; i++) {
-        tempDE.read(stream);
+        tempDE.read(mStream);
         if (tempDE.mItemName.empty()) {
             if (i < DEFAULT_DIR_SIZE)
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
@@ -259,19 +251,11 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
 }
 
 bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de) {
-    std::ifstream stream(this->mFileName, std::ios::binary);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
-
-
-    auto address = this->clusterToDataAddress(parentCluster);
-
-    stream.seekg(address);
+    seek(this->clusterToDataAddress(parentCluster));
 
     DirectoryEntry tempDE{};
     for (int i = 0; i < MAX_ENTRIES; i++) {
-        tempDE.read(stream);
+        tempDE.read(mStream);
         if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
             if (i < DEFAULT_DIR_SIZE)
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
@@ -292,23 +276,15 @@ bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, Directo
  * @return True on success, false otherwise.
  */
 bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
-    std::ifstream stream(this->mFileName, std::ios::binary);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
-
     DirectoryEntry toFindDE{}, parentDE{};
 
-    auto address = this->clusterToDataAddress(cluster);
-    stream.seekg(address);
+    seek(this->clusterToDataAddress(cluster));
 
-    toFindDE.read(stream);
+    toFindDE.read(mStream);
     if (!isAllocatedDirectoryEntry(toFindDE.mItemName)) return false;
 
-    parentDE.read(stream);
+    parentDE.read(mStream);
     if (!isAllocatedDirectoryEntry(parentDE.mItemName)) return false;
-
-    stream.close();
 
     if (this->findDirectoryEntry(parentDE.mStartCluster, toFindDE.mStartCluster, toFindDE)) {
         de = toFindDE;
@@ -325,60 +301,48 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
 
     if (!strcmp(itemNameCharArr, ".") || !strcmp(itemNameCharArr, "..")) return false;
 
-    std::fstream stream(this->mFileName, std::ios::out | std::ios::in | std::ios::binary);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
-
     auto startAddress = this->clusterToDataAddress(parentCluster);
+    seek(startAddress);
     int32_t removeAddress;
-    stream.seekg(startAddress);
 
     DirectoryEntry tempDE{}, lastDE{};
     char empty[DirectoryEntry::SIZE] = {'\00'};
     bool erased = false;
     for (int i = 0; i < MAX_ENTRIES; i++) {
-        tempDE.read(stream);
+        tempDE.read(mStream);
         if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
             if (i < DEFAULT_DIR_SIZE)
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
             if (!erased) return false; // we are at the end, and we didn't find entry to remove
-            stream.seekp(removeAddress);
-            lastDE.write(stream); // write last entry instead of erased entry
+            seek(removeAddress);
+            lastDE.write(mStream); // write last entry instead of erased entry
             auto lastAddress = startAddress + (i - 1) * DirectoryEntry::SIZE;
-            stream.seekp(lastAddress);
-            stream.write(empty, DirectoryEntry::SIZE); // erase last entry
+            seek(lastAddress);
+            mStream.write(empty, DirectoryEntry::SIZE); // erase last entry
             return true;
         }
         lastDE = tempDE;
         if (!erased && !strcmp(tempDE.mItemName.c_str(), itemNameCharArr)) {
             // label FAT cluster as unused
-            FAT::write(stream, this->clusterToFatAddress(tempDE.mStartCluster), FAT_UNUSED);
+            FAT::write(mStream, this->clusterToFatAddress(tempDE.mStartCluster), FAT_UNUSED);
             // remove entry from data cluster
             removeAddress = startAddress + i * DirectoryEntry::SIZE;
-            stream.seekp(removeAddress);
-            stream.write(empty, DirectoryEntry::SIZE); // erase entry to be removed
+            seek(removeAddress);
+            mStream.write(empty, DirectoryEntry::SIZE); // erase entry to be removed
             erased = true;
-            stream.flush();
+            flush();
         }
     }
     return false;
 }
 
 int FileSystem::getDirectoryEntryCount(int cluster) {
-    std::ifstream stream(this->mFileName, std::ios::binary);
-
-    if (!stream.is_open())
-        throw std::runtime_error(FS_OPEN_ERROR);
-
-    auto address = this->clusterToDataAddress(cluster);
-
-    stream.seekg(address);
+    seek(this->clusterToDataAddress(cluster));
 
     int i;
     DirectoryEntry tempDE{};
     for (i = 0; i < MAX_ENTRIES; i++) {
-        tempDE.read(stream);
+        tempDE.read(mStream);
         if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
             if (i < DEFAULT_DIR_SIZE)
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
@@ -390,6 +354,22 @@ int FileSystem::getDirectoryEntryCount(int cluster) {
 
 int FileSystem::getNeededClustersCount(int fileSize) const {
     return std::ceil(fileSize / static_cast<double>(this->mBootSector.mClusterSize));
+}
+
+int FileSystem::clusterToDataAddress(int cluster) const {
+    return this->mBootSector.mDataStartAddress + cluster * this->mBootSector.mClusterSize;
+}
+
+int FileSystem::clusterToFatAddress(int cluster) const {
+    return this->mBootSector.mFat1StartAddress + cluster * static_cast<int32_t>(sizeof(int32_t));
+}
+
+void FileSystem::seek(int pos) {
+    mStream.seekp(pos);
+}
+
+void FileSystem::flush() {
+    mStream.flush();
 }
 
 

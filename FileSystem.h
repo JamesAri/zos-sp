@@ -53,9 +53,9 @@ public:
 
     explicit BootSector(int size);
 
-    void write(std::ofstream &f);
+    void write(std::fstream &f);
 
-    void read(std::ifstream &f);
+    void read(std::fstream &f);
 
     friend std::ostream &operator<<(std::ostream &os, BootSector const &fs);
 
@@ -73,24 +73,20 @@ public:
  * DATA
  */
 class FileSystem {
-    std::fstream mStream;
-public:
     const std::string mFileName;
+public:
+    std::fstream mStream;
 
     BootSector mBootSector;
     DirectoryEntry mWorkingDirectory;
 
     explicit FileSystem(std::string &fileName);
 
-    void readVFS(std::ifstream &f);
+    void readVFS();
 
     friend std::ostream &operator<<(std::ostream &os, FileSystem const &fs);
 
     void formatFS(int size = DEFAULT_FORMAT_SIZE);
-
-    int clusterToDataAddress(int cluster) const;
-
-    int clusterToFatAddress(int cluster) const;
 
     bool getDirectory(int cluster, DirectoryEntry &de);
 
@@ -103,6 +99,14 @@ public:
     int getDirectoryEntryCount(int cluster);
 
     int getNeededClustersCount(int fileSize) const;
+
+    int clusterToDataAddress(int cluster) const;
+
+    int clusterToFatAddress(int cluster) const;
+
+    void seek(int pos);
+
+    void flush();
 };
 
 

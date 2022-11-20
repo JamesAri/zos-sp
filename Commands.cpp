@@ -11,19 +11,18 @@ void pathCheck(const std::string &path) {
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
 }
 
-void seekStreamToDataCluster(std::shared_ptr<FileSystem> &fs, std::fstream &stream, int cluster) {
+void seekStreamToDataCluster(std::shared_ptr<FileSystem> &fs, int cluster) {
     int32_t address = fs->clusterToDataAddress(cluster);
-    stream.seekp(address);
+    fs->seek(address);
 }
 
 int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, int cluster) {
-    std::ifstream stream(fs->mFileName, std::ios::binary);
     auto address = fs->clusterToDataAddress(cluster);
-    stream.seekg(address);
+    fs->seek(address);
 
     DirectoryEntry temp{};
     for (int entriesCount = 0; entriesCount < MAX_ENTRIES; entriesCount++) {
-        temp.read(stream);
+        temp.read(fs->mStream);
         if (!isAllocatedDirectoryEntry(temp.mItemName)) {
             if (entriesCount < DEFAULT_DIR_SIZE)
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
@@ -35,22 +34,18 @@ int getDirectoryNextFreeEntryAddress(std::shared_ptr<FileSystem> &fs, int cluste
 
 void writeNewDirectoryEntry(std::shared_ptr<FileSystem> &fs, int directoryCluster, DirectoryEntry &newDE) {
     int32_t freeParentEntryAddr = getDirectoryNextFreeEntryAddress(fs, directoryCluster);
-
-    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::app);
-    stream.seekp(freeParentEntryAddr);
-    newDE.write(stream);
+    fs->seek(freeParentEntryAddr);
+    newDE.write(fs->mStream);
 }
 
 void writeToFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster, int label) {
     int address = fs->clusterToFatAddress(cluster);
-    std::ofstream stream(fs->mFileName, std::ios::binary | std::ios::app);
-    FAT::write(stream, address, label);
+    FAT::write(fs->mStream, address, label);
 }
 
 int readFromFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster) {
     int address = fs->clusterToFatAddress(cluster);
-    std::ifstream stream(fs->mFileName, std::ios::binary);
-    return FAT::read(stream, address);
+    return FAT::read(fs->mStream, address);
 }
 
 bool isSpecialLabel(int label) {
@@ -76,6 +71,39 @@ getFatClusterChain(std::shared_ptr<FileSystem> &fs, int fromCluster, int fileSiz
         throw std::runtime_error("filesystem corrupted"); // todo mark as bad clusters
 
     return clusters;
+}
+
+void moveData(std::shared_ptr<FileSystem> &fs, std::vector<int> clusters, std::vector<char> &buffer) {
+    int clusterSize = fs->mBootSector.mClusterSize;
+    for (int i = 0; i < clusters.size(); i++) {
+        seekStreamToDataCluster(fs, clusters.at(i));
+        fs->mStream.write((char *) (&buffer[i * clusterSize]), clusterSize);
+    }
+}
+
+void writeDirectoryEntryReferences(std::shared_ptr<FileSystem> &fs, DirectoryEntry &parentDE, DirectoryEntry &newDE, int newFreeCluster) {
+    // Create new directory "." at new cluster
+    seekStreamToDataCluster(fs, newFreeCluster);
+    newDE.mItemName = ".";
+    newDE.write(fs->mStream);
+
+    // Create new directory ".." at new cluster
+    parentDE.mItemName = "..";
+    parentDE.write(fs->mStream);
+}
+
+std::vector<std::string> getDirectoryContents(std::shared_ptr<FileSystem> &fs, int directoryCluster) {
+    std::vector<std::string> fileNames{};
+    DirectoryEntry de{};
+    seekStreamToDataCluster(fs, directoryCluster);
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        de.read(fs->mStream);
+        if (!isAllocatedDirectoryEntry(de.mItemName)) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+        }
+        fileNames.push_back(de.mItemName);
+    }
 }
 
 //todo complete refactor
@@ -213,16 +241,8 @@ bool MkdirCommand::run() {
     DirectoryEntry newDE{newDirectoryName, false, 0, newFreeCluster};
     writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newDE);
 
-    // Create new directory "." at new cluster
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::out | std::ios::ate); // todo bug
-    seekStreamToDataCluster(mFS, stream, newFreeCluster);
-    newDE.mItemName = ".";
-    newDE.write(stream);
-
-    // Create new directory ".." at new cluster
-    parentDE.mItemName = "..";
-    parentDE.write(stream);
-    stream.close(); // todo
+    // Write references ".' and ".."
+    writeDirectoryEntryReferences(mFS, parentDE, newDE, newFreeCluster);
 
     // All went ok, label new cluster as allocated
     writeToFatByCluster(mFS, newFreeCluster, FAT_FILE_END);
@@ -271,25 +291,12 @@ bool LsCommand::run() {
     }
 
     // Get filenames
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::in | std::ios::app); // todo
-    seekStreamToDataCluster(mFS, stream, parentDE.mStartCluster);
+    auto fileNames = getDirectoryContents(mFS, parentDE.mStartCluster);
 
-    std::vector<std::string> fileNames{};
-    DirectoryEntry de{};
-
-    for (int i = 0; i < MAX_ENTRIES; i++) {
-        de.read(stream);
-        if (!isAllocatedDirectoryEntry(de.mItemName)) {
-            if (i < DEFAULT_DIR_SIZE)
-                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
-        }
-        fileNames.push_back(de.mItemName);
-    }
     for (auto &fn: fileNames) {
         std::cout << fn.c_str() << " ";
     }
     std::cout << std::endl;
-    stream.close(); //todo
     return true;
 }
 
@@ -429,14 +436,7 @@ bool IncpCommand::run() {
     writeToFatByCluster(mFS, clusters.back(), FAT_FILE_END);
 
     // Move data
-    std::fstream stream(mFS->mFileName, std::ios::binary | std::ios::out);
-    for (int i = 0; i < clusters.size() - 1; i++) {
-        seekStreamToDataCluster(mFS, stream, clusters.at(i));
-        stream.write((char *) (&mBuffer[i * clusterSize]), clusterSize);
-    }
-    seekStreamToDataCluster(mFS, stream, clusters.back());
-    stream.write((char *) (&mBuffer[fileSize - trailingBytes]), trailingBytes); // todo check on bigger files
-    stream.close(); // todo
+    moveData(mFS, clusters, mBuffer);
 
     DirectoryEntry newFileDE{mOpt1, true, fileSize, clusters.at(0)};
     writeNewDirectoryEntry(mFS, mDestDE.mStartCluster, newFileDE);
