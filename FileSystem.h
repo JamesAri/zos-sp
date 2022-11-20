@@ -11,7 +11,7 @@ public:
     int mSize;
     int mStartCluster;
 
-    DirectoryEntry() {};
+    DirectoryEntry(){}
 
     DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster);
 
@@ -19,13 +19,13 @@ public:
 
     static const int SIZE = ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
 
-    void write(std::ostream &f);
+    void write(std::fstream &f);
 
-    void write(std::ostream &f, int32_t pos);
+    void write(std::fstream &f, int32_t pos);
 
-    void read(std::istream &f);
+    void read(std::fstream &f);
 
-    void read(std::istream &f, int32_t pos);
+    void read(std::fstream &f, int32_t pos);
 
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };
@@ -49,7 +49,7 @@ public:
                             sizeof(mDiskSize) + sizeof(mFatCount) + sizeof(mFat1StartAddress) +
                             sizeof(mDataStartAddress) + sizeof(mPaddingSize);
 
-    BootSector() {};
+    BootSector(){}
 
     explicit BootSector(int size);
 
@@ -112,16 +112,16 @@ public:
 
 class FAT {
 private:
-    FAT() {/* static class */}
+    FAT(){}
 
 public:
-    static void write(std::ostream &f, int32_t pos, int32_t label);
+    static void write(std::fstream &f, int32_t pos, int32_t label);
 
-    static void write(std::ostream &f, int32_t label);
+    static void write(std::fstream &f, int32_t label);
 
-    static int read(std::istream &f, int32_t pos);
+    static int read(std::fstream &f, int32_t pos);
 
-    static int read(std::istream &f);
+    static int read(std::fstream &f);
 
     static void wipe(std::ostream &f, int32_t startAddress, int32_t size);
 

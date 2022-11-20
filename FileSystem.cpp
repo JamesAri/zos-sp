@@ -20,7 +20,7 @@ DirectoryEntry::DirectoryEntry(const std::string &mItemName, bool mIsFile, int m
     this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
 }
 
-void DirectoryEntry::write(std::ostream &f) {
+void DirectoryEntry::write(std::fstream &f) {
     writeToStream(f, this->mItemName, ITEM_NAME_LENGTH);
     writeToStream(f, this->mIsFile);
     writeToStream(f, this->mSize);
@@ -28,19 +28,19 @@ void DirectoryEntry::write(std::ostream &f) {
 }
 
 
-void DirectoryEntry::write(std::ostream &f, int32_t pos) {
+void DirectoryEntry::write(std::fstream &f, int32_t pos) {
     f.seekp(pos);
     this->write(f);
 }
 
-void DirectoryEntry::read(std::istream &f) {
+void DirectoryEntry::read(std::fstream &f) {
     readFromStream(f, this->mItemName, ITEM_NAME_LENGTH);
     readFromStream(f, this->mIsFile);
     readFromStream(f, this->mSize);
     readFromStream(f, this->mStartCluster);
 }
 
-void DirectoryEntry::read(std::istream &f, int32_t pos) {
+void DirectoryEntry::read(std::fstream &f, int32_t pos) {
     f.seekg(pos);
     this->read(f);
 }
@@ -52,22 +52,22 @@ std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
               << "  StartCluster: " << di.mStartCluster << "\n";
 }
 
-void FAT::write(std::ostream &f, int32_t label) {
+void FAT::write(std::fstream &f, int32_t label) {
     writeToStream(f, label);
 }
 
-void FAT::write(std::ostream &f, int32_t pos, int32_t label) {
+void FAT::write(std::fstream &f, int32_t pos, int32_t label) {
     f.seekp(pos);
     FAT::write(f, label);
 }
 
-int FAT::read(std::istream &f) {
+int FAT::read(std::fstream &f) {
     int32_t clusterTag;
     readFromStream(f, clusterTag);
     return clusterTag;
 }
 
-int FAT::read(std::istream &f, int32_t pos) {
+int FAT::read(std::fstream &f, int32_t pos) {
     f.seekg(pos);
     return FAT::read(f);
 }
@@ -179,7 +179,10 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
         } catch (...) {
             std::cerr << "An error occurred during the loading process.\nInput file might be corrupted." << std::endl;
         }
-    } else formatFS();
+    } else {
+        formatFS();
+        flush();
+    }
 }
 
 void FileSystem::readVFS() {
@@ -210,19 +213,18 @@ void FileSystem::formatFS(int size) {
     }
 
     // Make root directory
-    seek(this->mBootSector.mDataStartAddress);
     DirectoryEntry rootDir{std::string("."), false, 0, 0};
     DirectoryEntry rootDir2{std::string(".."), false, 0, 0}; // do i need it? todo
+    this->mWorkingDirectory = rootDir;
+    seek(this->mBootSector.mDataStartAddress);
     rootDir.write(mStream);
     rootDir2.write(mStream);
-    this->mWorkingDirectory = rootDir;
 
     // Wipe FAT tables
     FAT::wipe(mStream, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
 
     // Label root directory cluster in FAT
     FAT::write(mStream, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
-    flush();
 }
 
 
