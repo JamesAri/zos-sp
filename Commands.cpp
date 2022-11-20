@@ -125,6 +125,9 @@ std::vector<int> getFatClusterChain(std::shared_ptr<FileSystem> &fs, int fromClu
 
 void writeFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters, std::vector<char> &buffer) {
     int filesSize = static_cast<int>(buffer.size());
+
+    if (!filesSize) return;
+
     int clusterSize = fs->mBootSector.mClusterSize;
     int trailingBytes = filesSize % clusterSize;
 
@@ -435,7 +438,7 @@ bool InfoCommand::validate_arguments() {
 
 bool IncpCommand::run() {
     int fileSize = static_cast<int>(mBuffer.size());
-    int neededClusters = mFS->getNeededClustersCount(fileSize);
+    int neededClusters = (fileSize) ? mFS->getNeededClustersCount(fileSize) : 1;
 
     // Get free clusters
     auto clusters = FAT::getFreeClusters(mFS, neededClusters);
