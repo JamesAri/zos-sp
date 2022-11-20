@@ -179,14 +179,13 @@ bool CpCommand::run() {
     mAccumulator.pop_back();
 
     DirectoryEntry parentDE;
-    if (mAccumulator.size() == 1)
+    if (mAccumulator.empty())
         parentDE = mFS->mWorkingDirectory;
     else
         parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
     if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName, true))
         throw InvalidOptionException(EXIST_ERROR);
-//        mFS->removeDirectoryEntry(parentDE.mStartCluster, newFileName, true); // to-do - if is file, remove contents
 
     // From clusters
     auto fromClusters = getFatClusterChain(mFS, mFromDE.mStartCluster, mFromDE.mSize);
@@ -245,7 +244,7 @@ bool MkdirCommand::run() {
     mAccumulator.pop_back();
 
     DirectoryEntry parentDE{};
-    if (mAccumulator.size() == 1) // we have only new name of directory in accumulator
+    if (mAccumulator.empty()) // we have only new name of directory in accumulator
         parentDE = mFS->mWorkingDirectory;
     else
         parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
