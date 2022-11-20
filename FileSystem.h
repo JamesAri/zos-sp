@@ -93,9 +93,11 @@ public:
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
 
+    bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de, bool isFile);
+
     bool findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de);
 
-    bool removeDirectoryEntry(int parentCluster, const std::string &itemName);
+    bool removeDirectoryEntry(int parentCluster, const std::string &itemName, bool isFile);
 
     int getDirectoryEntryCount(int cluster);
 

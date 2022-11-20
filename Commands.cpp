@@ -85,9 +85,9 @@ std::vector<std::string> getDirectoryContents(std::shared_ptr<FileSystem> &fs, i
 }
 
 
-bool directoryEntryExists(std::shared_ptr<FileSystem> &fs, int cluster, const std::string &itemName) {
+bool directoryEntryExists(std::shared_ptr<FileSystem> &fs, int cluster, const std::string &itemName, bool isFile) {
     DirectoryEntry temp{};
-    return fs->findDirectoryEntry(cluster, itemName, temp);
+    return fs->findDirectoryEntry(cluster, itemName, temp, isFile);
 }
 
 void labelFatChain(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters) {
@@ -163,8 +163,8 @@ getLastDirectoryEntry(std::shared_ptr<FileSystem> &fs, int startCluster, std::ve
         throw std::runtime_error("received empty path");
 
     int curCluster = startCluster;
-    for (auto it{fileNames.begin()}; it != std::prev(fileNames.end()); it++) {
-        if (fs->findDirectoryEntry(curCluster, *it, parentDE)) {
+    for (auto &it : fileNames) {
+        if (fs->findDirectoryEntry(curCluster, it, parentDE)) {
             curCluster = parentDE.mStartCluster;
         } else {
             throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
@@ -176,22 +176,17 @@ getLastDirectoryEntry(std::shared_ptr<FileSystem> &fs, int startCluster, std::ve
 
 bool CpCommand::run() {
     auto newFileName = mAccumulator.back();
+    mAccumulator.pop_back();
 
-    DirectoryEntry parentDE = mFS->mWorkingDirectory;
+    DirectoryEntry parentDE;
+    if (mAccumulator.size() == 1)
+        parentDE = mFS->mWorkingDirectory;
+    else
+        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
-    if (mAccumulator.size() > 1) {
-        int curCluster = parentDE.mStartCluster;
-        for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
-            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) {
-                curCluster = parentDE.mStartCluster;
-            } else {
-                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-            }
-        }
-    }
-
-    if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName))
-        mFS->removeDirectoryEntry(parentDE.mStartCluster, newFileName);
+    if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName, true))
+        throw InvalidOptionException(EXIST_ERROR);
+//        mFS->removeDirectoryEntry(parentDE.mStartCluster, newFileName, true); // to-do - if is file, remove contents
 
     // From clusters
     auto fromClusters = getFatClusterChain(mFS, mFromDE.mStartCluster, mFromDE.mSize);
@@ -219,15 +214,7 @@ bool CpCommand::validate_arguments() {
     pathCheck(mOpt2);
 
     auto fileNames = split(mOpt1, "/");
-    DirectoryEntry fromDE{};
-    int curCluster = mFS->mWorkingDirectory.mStartCluster;
-    for (auto &it: fileNames) {
-        if (mFS->findDirectoryEntry(curCluster, it, fromDE)) {
-            curCluster = fromDE.mStartCluster;
-        } else {
-            throw InvalidOptionException(PATH_NOT_FOUND_ERROR + " (first argument)");
-        }
-    }
+    DirectoryEntry fromDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, fileNames);
 
     if (!fromDE.mIsFile)
         throw InvalidOptionException("cannot copy directory");
@@ -263,7 +250,7 @@ bool MkdirCommand::run() {
     else
         parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
-    if (directoryEntryExists(mFS, parentDE.mStartCluster, newDirectoryName))
+    if (directoryEntryExists(mFS, parentDE.mStartCluster, newDirectoryName, false))
         throw InvalidOptionException(EXIST_ERROR);
 
     int32_t newFreeCluster = FAT::getFreeClusters(mFS).back();
@@ -290,13 +277,13 @@ bool MkdirCommand::validate_arguments() {
 bool RmdirCommand::run() {
     DirectoryEntry de{};
 
-    if (!mFS->findDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1, de))
+    if (!mFS->findDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1, de, false))
         throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
 
     if (mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
         throw InvalidOptionException(NOT_EMPTY_ERROR);
 
-    return mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1);
+    return mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1, false);
 }
 
 bool RmdirCommand::validate_arguments() {
@@ -383,7 +370,7 @@ bool PwdCommand::run() {
 
         if (childCluster == 0) break;
 
-        if (!mFS->findDirectoryEntry(childCluster, "..", de))
+        if (!mFS->findDirectoryEntry(childCluster, "..", de, false))
             throw std::runtime_error(CORRUPTED_FS_ERROR);
 
         parentCluster = de.mStartCluster;
@@ -448,10 +435,13 @@ bool IncpCommand::run() {
     mAccumulator.pop_back();
 
     DirectoryEntry parentDE{};
-    if (mAccumulator.size() == 1) // we have only new name of file in accumulator
+    if (mAccumulator.empty()) // we have had new name of file in accumulator
         parentDE = mFS->mWorkingDirectory;
     else
         parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
+
+    if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName, true))
+        throw InvalidOptionException(EXIST_ERROR);
 
     DirectoryEntry newFileDE{newFileName, true, fileSize, clusters.at(0)};
     writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newFileDE);

@@ -228,11 +228,6 @@ void FileSystem::formatFS(int diskSize) {
     FAT::write(mStream, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
 }
 
-
-/**
- * @param de Mutates DirectoryEntry only if entry is found, in which case it
- * copies the found data into passed object.
- */
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
     seek(this->clusterToDataAddress(cluster));
 
@@ -246,6 +241,30 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
             return false;
         }
         if (!strcmp(tempDE.mItemName.c_str(), itemNameCharArr)) { // ignore \00 (NULL) paddings
+            de = tempDE;
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @param de Mutates DirectoryEntry only if entry is found, in which case it
+ * copies the found data into passed object.
+ */
+bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de, bool isFile) {
+    seek(this->clusterToDataAddress(cluster));
+
+    DirectoryEntry tempDE{};
+    auto itemNameCharArr = itemName.c_str();
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        tempDE.read(mStream);
+        if (tempDE.mItemName.empty()) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            return false;
+        }
+        if (!strcmp(tempDE.mItemName.c_str(), itemNameCharArr) && tempDE.mIsFile == isFile) { // ignore \00 (NULL) paddings
             de = tempDE;
             return true;
         }
@@ -299,7 +318,7 @@ bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
 /**
  * Force delete, i.e. doesn't check if directory is empty.
  */
-bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &itemName) {
+bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &itemName, bool isFile) {
     auto itemNameCharArr = itemName.c_str();
 
     if (!strcmp(itemNameCharArr, ".") || !strcmp(itemNameCharArr, "..")) return false;
@@ -313,7 +332,7 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
     bool erased = false;
     for (int i = 0; i < MAX_ENTRIES; i++) {
         tempDE.read(mStream);
-        if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
+        if (!isAllocatedDirectoryEntry(tempDE.mItemName)) { // we are at the end
             if (i < DEFAULT_DIR_SIZE)
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
             if (!erased) return false; // we are at the end, and we didn't find entry to remove
@@ -325,7 +344,7 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
             return true;
         }
         lastDE = tempDE;
-        if (!erased && !strcmp(tempDE.mItemName.c_str(), itemNameCharArr)) {
+        if (!erased && !strcmp(tempDE.mItemName.c_str(), itemNameCharArr) && tempDE.mIsFile == isFile) {
             // label FAT cluster as unused
             FAT::write(mStream, this->clusterToFatAddress(tempDE.mStartCluster), FAT_UNUSED);
             // remove entry from data cluster
@@ -374,5 +393,7 @@ void FileSystem::seek(int pos) {
 void FileSystem::flush() {
     mStream.flush();
 }
+
+
 
 
