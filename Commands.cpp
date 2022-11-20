@@ -155,6 +155,24 @@ std::vector<char> readFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &cl
     return buffer;
 }
 
+DirectoryEntry
+getLastDirectoryEntry(std::shared_ptr<FileSystem> &fs, int startCluster, std::vector<std::string> &fileNames) {
+    DirectoryEntry parentDE{};
+
+    if (fileNames.empty())
+        throw std::runtime_error("received empty path");
+
+    int curCluster = startCluster;
+    for (auto it{fileNames.begin()}; it != std::prev(fileNames.end()); it++) {
+        if (fs->findDirectoryEntry(curCluster, *it, parentDE)) {
+            curCluster = parentDE.mStartCluster;
+        } else {
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+        }
+    }
+    return parentDE;
+}
+
 
 bool CpCommand::run() {
     auto newFileName = mAccumulator.back();
@@ -237,20 +255,16 @@ bool RmCommand::validate_arguments() {
 
 bool MkdirCommand::run() {
     auto newDirectoryName = mAccumulator.back();
+    mAccumulator.pop_back();
 
-    DirectoryEntry parentDE = mFS->mWorkingDirectory;
+    DirectoryEntry parentDE{};
+    if (mAccumulator.size() == 1) // we have only new name of directory in accumulator
+        parentDE = mFS->mWorkingDirectory;
+    else
+        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
-    if (mAccumulator.size() > 1) {
-        int curCluster = parentDE.mStartCluster;
-        for (auto it{mAccumulator.begin()}; it != std::prev(mAccumulator.end()); it++) {
-            if (mFS->findDirectoryEntry(curCluster, *it, parentDE)) curCluster = parentDE.mStartCluster;
-            else throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-        }
-    }
-
-    if (mFS->findDirectoryEntry(parentDE.mStartCluster, newDirectoryName, parentDE))
+    if (directoryEntryExists(mFS, parentDE.mStartCluster, newDirectoryName))
         throw InvalidOptionException(EXIST_ERROR);
-
 
     int32_t newFreeCluster = FAT::getFreeClusters(mFS).back();
 
@@ -292,23 +306,17 @@ bool RmdirCommand::validate_arguments() {
 
 bool LsCommand::run() {
     // Resolve path
-    DirectoryEntry parentDE = mFS->mWorkingDirectory;
+    DirectoryEntry de{};
+    if (mAccumulator.empty())
+        de = mFS->mWorkingDirectory;
+    else
+        de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
-    if (!mAccumulator.empty()) {
-        int curCluster = parentDE.mStartCluster;
-        // Iterates over all directory entries (file names) in accumulator.
-        // If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
-        for (auto &it: mAccumulator) {
-            if (mFS->findDirectoryEntry(curCluster, it, parentDE)) {
-                curCluster = parentDE.mStartCluster;
-            } else {
-                throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-            }
-        }
-    }
+    if (de.mIsFile)
+        throw InvalidOptionException(LS_FILE_ERROR);
 
     // Get filenames
-    auto fileNames = getDirectoryContents(mFS, parentDE.mStartCluster);
+    auto fileNames = getDirectoryContents(mFS, de.mStartCluster);
 
     for (auto &fn: fileNames) {
         std::cout << fn.c_str() << " ";
@@ -334,23 +342,18 @@ bool CatCommand::validate_arguments() {
 }
 
 bool CdCommand::run() {
-    DirectoryEntry parentDE = mFS->mWorkingDirectory;
+    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
-    int curCluster = parentDE.mStartCluster;
-    // Iterates over all directory entries (file names) in accumulator.
-    // If any of the entry fails validation, a PATH NOT FOUND exception is thrown.
-    for (auto &it: mAccumulator) {
-        if (mFS->findDirectoryEntry(curCluster, it, parentDE)) {
-            curCluster = parentDE.mStartCluster;
-        } else {
-            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-        }
-    }
-    if (!strcmp(parentDE.mItemName.c_str(), "..") || !strcmp(parentDE.mItemName.c_str(), ".")) {
-        if (!mFS->getDirectory(parentDE.mStartCluster, parentDE))
+    if (de.mIsFile)
+        throw InvalidOptionException(CD_FILE_ERROR);
+
+    // If it is reference, get correct name from parent directory
+    if (!strcmp(de.mItemName.c_str(), "..") || !strcmp(de.mItemName.c_str(), ".")) {
+        if (!mFS->getDirectory(de.mStartCluster, de))
             throw std::runtime_error(CORRUPTED_FS_ERROR);
     }
-    mFS->mWorkingDirectory = parentDE;
+
+    mFS->mWorkingDirectory = de;
     return true;
 }
 
@@ -404,16 +407,8 @@ bool PwdCommand::validate_arguments() {
 }
 
 bool InfoCommand::run() {
-    DirectoryEntry de = mFS->mWorkingDirectory;
+    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
-    int curCluster = de.mStartCluster;
-    for (auto &it: mAccumulator) {
-        if (mFS->findDirectoryEntry(curCluster, it, de)) {
-            curCluster = de.mStartCluster;
-        } else {
-            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-        }
-    }
     if (!de.mIsFile) {
         std::cout << de << std::endl;
         return true;
@@ -421,7 +416,7 @@ bool InfoCommand::run() {
 
     auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
 
-    for (auto it{clusters.begin()}; it != std::prev(clusters.end()); it++) {
+    for (auto it{clusters.begin()}; it != std::prev(clusters.end()); it++) { // todo correct?
         std::cout << *it << " ";
     }
     std::cout << std::endl;
@@ -449,16 +444,22 @@ bool IncpCommand::run() {
     // Move data
     writeFile(mFS, clusters, mBuffer);
 
-    DirectoryEntry newFileDE{mOpt1, true, fileSize, clusters.at(0)};
-    writeNewDirectoryEntry(mFS, mDestDE.mStartCluster, newFileDE);
+    auto newFileName = mAccumulator.back();
+    mAccumulator.pop_back();
+
+    DirectoryEntry parentDE{};
+    if (mAccumulator.size() == 1) // we have only new name of file in accumulator
+        parentDE = mFS->mWorkingDirectory;
+    else
+        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
+
+    DirectoryEntry newFileDE{newFileName, true, fileSize, clusters.at(0)};
+    writeNewDirectoryEntry(mFS, parentDE.mStartCluster, newFileDE);
     return true;
 }
 
 bool IncpCommand::validate_arguments() {
     if (mOptCount != 2) return false;
-
-    // Input file check
-    pathCheck(mOpt1);
 
     std::ifstream stream(mOpt1, std::ios::binary | std::ios::ate);
 
@@ -475,20 +476,7 @@ bool IncpCommand::validate_arguments() {
     stream.close();
 
     pathCheck(mOpt2);
-
-    auto fileNames = split(mOpt2, "/");
-
-    DirectoryEntry de{};
-    int curCluster = mFS->mWorkingDirectory.mStartCluster;
-    for (auto &it: fileNames) {
-        if (mFS->findDirectoryEntry(curCluster, it, de)) {
-            curCluster = de.mStartCluster;
-        } else {
-            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
-        }
-    }
-
-    mDestDE = de;
+    mAccumulator = split(mOpt2, "/");
     return true;
 }
 

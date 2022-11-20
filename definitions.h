@@ -31,9 +31,13 @@ const std::string DE_ITEM_NAME_LENGTH_ERROR{"internal error, received invalid (t
 const std::string CORRUPTED_FS_ERROR{"internal error, file system is corrupted"};
 const std::string FILE_READ_ERROR{"internal error, couldn't readVFS file contents"};
 
+
 // Runtime recoverable errors (custom)
+const std::string LS_FILE_ERROR{"cannot list file"};
+const std::string CD_FILE_ERROR{"cannot cd into file"};
 const std::string INVALID_DIR_PATH_ERROR{"invalid directory path"};
 const std::string INVALID_FILE_NAME_ERROR{"invalid file name"};
+
 // Runtime recoverable errors (from specification)
 const std::string PATH_NOT_FOUND_ERROR{"PATH NOT FOUND"};
 const std::string FILE_NOT_FOUND_ERROR{"FILE NOT FOUND"};

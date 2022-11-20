@@ -275,7 +275,7 @@ public:
     using ICommand::registerFS;
 
 private:
-    DirectoryEntry mDestDE;
+    std::vector<std::string> mAccumulator;
     std::vector<char> mBuffer;
 
     bool validate_arguments() override;
