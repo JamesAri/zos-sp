@@ -36,6 +36,7 @@ class BootSector {
 private:
     int mFatSize;
 public:
+    // actual memory structure
     std::string mSignature;
     int mClusterSize;
     int mClusterCount;
@@ -51,7 +52,7 @@ public:
 
     BootSector(){}
 
-    explicit BootSector(int size);
+    explicit BootSector(int diskSize);
 
     void write(std::fstream &f);
 
@@ -86,7 +87,7 @@ public:
 
     friend std::ostream &operator<<(std::ostream &os, FileSystem const &fs);
 
-    void formatFS(int size = DEFAULT_FORMAT_SIZE);
+    void formatFS(int diskSize = DEFAULT_FORMAT_SIZE);
 
     bool getDirectory(int cluster, DirectoryEntry &de);
 
@@ -123,7 +124,7 @@ public:
 
     static int read(std::fstream &f);
 
-    static void wipe(std::ostream &f, int32_t startAddress, int32_t size);
+    static void wipe(std::ostream &f, int32_t startAddress, int32_t clusterCount);
 
     static std::vector<int> getFreeClusters(std::shared_ptr<FileSystem> &fs, int count = 1);
 };

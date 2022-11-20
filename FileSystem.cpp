@@ -72,12 +72,12 @@ int FAT::read(std::fstream &f, int32_t pos) {
     return FAT::read(f);
 }
 
-void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t size) {
+void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t clusterCount) {
     f.seekp(startAddress);
 
-    auto wipeUnit = reinterpret_cast<const char *>(&FAT_UNUSED);
-    for (int i = 0; i < size; i++) {
-        f.write(wipeUnit, sizeof(FAT_UNUSED));
+    auto labelUnused = reinterpret_cast<const char *>(&FAT_UNUSED);
+    for (int i = 0; i < clusterCount; i++) {
+        f.write(labelUnused, sizeof(FAT_UNUSED));
     }
 }
 
@@ -89,6 +89,7 @@ std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count
 
     int32_t label;
     std::vector<int> clusters{};
+    clusters.reserve(count);
     for (int32_t i = 0; i < fs->mBootSector.mClusterCount && clusters.size() < count; i++) {
         readFromStream(fs->mStream, label);
         if (label == FAT_UNUSED) {
@@ -103,7 +104,7 @@ std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count
 }
 
 
-BootSector::BootSector(int size) : mDiskSize(size * FORMAT_UNIT) {
+BootSector::BootSector(int diskSize) : mDiskSize(diskSize * FORMAT_UNIT) {
     this->mSignature = SIGNATURE;
     this->mClusterSize = CLUSTER_SIZE;
     this->mFatCount = FAT_COUNT;
@@ -200,9 +201,9 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
               << "========== END OF FILE SYSTEM SPECS ========== \n";
 }
 
-void FileSystem::formatFS(int size) {
+void FileSystem::formatFS(int diskSize) {
     // Write boot-sector
-    this->mBootSector = BootSector{size};
+    this->mBootSector = BootSector{diskSize};
     this->mBootSector.write(mStream);
 
     // Wipe each data cluster
