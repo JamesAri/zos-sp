@@ -3,6 +3,7 @@
 #include "utils/validators.h"
 
 #include <iostream>
+#include <sstream>
 #include <cmath>
 
 DirectoryEntry::DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
@@ -328,7 +329,7 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
     int32_t removeAddress;
 
     DirectoryEntry tempDE{}, lastDE{};
-    char empty[DirectoryEntry::SIZE] = {'\00'};
+    char emptyBfr[DirectoryEntry::SIZE] = {'\00'};
     bool erased = false;
     for (int i = 0; i < MAX_ENTRIES; i++) {
         tempDE.read(mStream);
@@ -340,7 +341,7 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
             lastDE.write(mStream); // write last entry instead of erased entry
             auto lastAddress = startAddress + (i - 1) * DirectoryEntry::SIZE;
             seek(lastAddress);
-            mStream.write(empty, DirectoryEntry::SIZE); // erase last entry
+            mStream.write(emptyBfr, DirectoryEntry::SIZE); // erase last entry
             return true;
         }
         lastDE = tempDE;
@@ -350,7 +351,7 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
             // remove entry from data cluster
             removeAddress = startAddress + i * DirectoryEntry::SIZE;
             seek(removeAddress);
-            mStream.write(empty, DirectoryEntry::SIZE); // erase entry to be removed
+            mStream.write(emptyBfr, DirectoryEntry::SIZE); // erase entry to be removed
             erased = true;
             flush();
         }
@@ -392,6 +393,44 @@ void FileSystem::seek(int pos) {
 
 void FileSystem::flush() {
     mStream.flush();
+}
+
+std::string FileSystem::getWorkingDirectoryPath() {
+    if (mWorkingDirectory.mStartCluster == 0) {
+        return "/";
+    }
+    std::queue<std::string> fileNames{};
+
+    DirectoryEntry de = mWorkingDirectory;
+
+    int childCluster = de.mStartCluster, parentCluster;
+    int safetyCounter = 0;
+    while (true) {
+        safetyCounter++;
+        if (safetyCounter > MAX_ENTRIES)
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
+
+        if (childCluster == 0) break;
+
+        if (!findDirectoryEntry(childCluster, "..", de, false))
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
+
+        parentCluster = de.mStartCluster;
+
+        if (!findDirectoryEntry(parentCluster, childCluster, de))
+            throw std::runtime_error(CORRUPTED_FS_ERROR);
+
+        childCluster = parentCluster;
+
+        fileNames.push(de.mItemName);
+    }
+    std::stringstream stream{};
+
+    while (!fileNames.empty()) {
+        stream << "/" << fileNames.front().c_str();
+        fileNames.pop();
+    }
+    return stream.str();
 }
 
 

@@ -84,6 +84,9 @@ public:
     using ICommand::registerFS;
 
 private:
+    std::vector<std::string> mAccumulator1;
+    std::vector<std::string> mAccumulator2;
+
     bool validate_arguments() override;
 
     bool run() override;
@@ -191,6 +194,8 @@ public:
     using ICommand::registerFS;
 
 private:
+    std::vector<std::string> mAccumulator;
+
     bool validate_arguments() override;
 
     bool run() override;
@@ -299,6 +304,8 @@ public:
     using ICommand::registerFS;
 
 private:
+    std::vector<std::string> mAccumulator;
+
     bool validate_arguments() override;
 
     bool run() override;

@@ -3,6 +3,7 @@
 
 #include "definitions.h"
 #include <fstream>
+#include <queue>
 
 class DirectoryEntry {
 public:
@@ -90,6 +91,8 @@ public:
     void formatFS(int diskSize = DEFAULT_FORMAT_SIZE);
 
     bool getDirectory(int cluster, DirectoryEntry &de);
+
+    std::string getWorkingDirectoryPath();
 
     bool findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de);
 

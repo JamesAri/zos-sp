@@ -6,6 +6,12 @@
 #include <fstream>
 #include <cmath>
 
+enum class EFileOption {
+    FILE,
+    DIRECTORY,
+    UNSPECIFIED,
+};
+
 void pathCheck(const std::string &path) {
     if (!validateFilePath(path))
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
@@ -110,12 +116,14 @@ std::vector<int> getFatClusterChain(std::shared_ptr<FileSystem> &fs, int fromClu
         throw std::runtime_error("internal error, incorrect cluster count");
 
     std::vector<int> clusters{};
+    clusters.reserve(clusterCount);
     int curCluster = fromCluster;
-    for (int i = 0; i < clusterCount; i++) {
+    for (int i = 0; i < clusterCount - 1; i++) {
         clusters.push_back(curCluster);
         curCluster = readFromFatByCluster(fs, curCluster);
         if (isSpecialLabel(curCluster) || curCluster >= fs->mBootSector.mClusterCount) break;
     }
+    clusters.push_back(curCluster);
     int lastLabel = readFromFatByCluster(fs, curCluster);
     if (clusters.size() != clusterCount || lastLabel != FAT_FILE_END)
         throw std::runtime_error("filesystem corrupted"); // todo mark as bad clusters
@@ -144,8 +152,7 @@ std::vector<char> readFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &cl
     int clusterSize = fs->mBootSector.mClusterSize;
     int trailingBytes = fileSize % clusterSize;
 
-    std::vector<char> buffer{};
-    buffer.reserve(fileSize);
+    std::vector<char> buffer(fileSize);
     for (int i = 0; i < clusters.size() - 1; i++) {
         seekStreamToDataCluster(fs, clusters.at(i));
         fs->mStream.read((char *) (&buffer[i * clusterSize]), clusterSize);
@@ -155,20 +162,31 @@ std::vector<char> readFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &cl
     return buffer;
 }
 
-DirectoryEntry
-getLastDirectoryEntry(std::shared_ptr<FileSystem> &fs, int startCluster, std::vector<std::string> &fileNames) {
+DirectoryEntry getLastDirectoryEntry(std::shared_ptr<FileSystem> &fs,
+                                     int startCluster,
+                                     std::vector<std::string> &fileNames,
+                                     EFileOption lastEntryOpt = EFileOption::UNSPECIFIED) {
     DirectoryEntry parentDE{};
 
     if (fileNames.empty())
         throw std::runtime_error("received empty path");
 
     int curCluster = startCluster;
-    for (auto &it : fileNames) {
-        if (fs->findDirectoryEntry(curCluster, it, parentDE)) {
+    for (int i = 0; i < fileNames.size() - 1; i++) {
+        if (fs->findDirectoryEntry(curCluster, fileNames.at(i), parentDE)) {
             curCluster = parentDE.mStartCluster;
         } else {
             throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
         }
+    }
+    if (lastEntryOpt == EFileOption::DIRECTORY) {
+        if (!fs->findDirectoryEntry(curCluster, fileNames.back(), parentDE, false))
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+    } else if (lastEntryOpt == EFileOption::FILE) {
+        if (!fs->findDirectoryEntry(curCluster, fileNames.back(), parentDE, true))
+            throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
+    } else if (!fs->findDirectoryEntry(curCluster, fileNames.back(), parentDE)) {
+        throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
     }
     return parentDE;
 }
@@ -182,7 +200,8 @@ bool CpCommand::run() {
     if (mAccumulator.empty())
         parentDE = mFS->mWorkingDirectory;
     else
-        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
+        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                         EFileOption::DIRECTORY);
 
     if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName, true))
         throw InvalidOptionException(EXIST_ERROR);
@@ -213,10 +232,8 @@ bool CpCommand::validate_arguments() {
     pathCheck(mOpt2);
 
     auto fileNames = split(mOpt1, "/");
-    DirectoryEntry fromDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, fileNames);
-
-    if (!fromDE.mIsFile)
-        throw InvalidOptionException("cannot copy directory");
+    DirectoryEntry fromDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, fileNames,
+                                                  EFileOption::FILE);
 
     mFromDE = fromDE;
     mAccumulator = split(mOpt2, "/");
@@ -224,11 +241,19 @@ bool CpCommand::validate_arguments() {
 }
 
 bool MvCommand::run() {
+    auto fromDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator1, EFileOption::FILE);
+    auto toDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator2, EFileOption::FILE);
+    mFS->removeDirectoryEntry(fromDE.mStartCluster);
     return true;
 }
 
 bool MvCommand::validate_arguments() {
-    return mOptCount == 2;
+    if (mOptCount != 2) return false;
+    pathCheck(mOpt1);
+    pathCheck(mOpt2);
+    mAccumulator1 = split(mOpt1, "/");
+    mAccumulator2 = split(mOpt2, "/");
+    return true;
 }
 
 bool RmCommand::run() {
@@ -247,7 +272,8 @@ bool MkdirCommand::run() {
     if (mAccumulator.empty()) // we have only new name of directory in accumulator
         parentDE = mFS->mWorkingDirectory;
     else
-        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
+        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                         EFileOption::DIRECTORY);
 
     if (directoryEntryExists(mFS, parentDE.mStartCluster, newDirectoryName, false))
         throw InvalidOptionException(EXIST_ERROR);
@@ -296,10 +322,7 @@ bool LsCommand::run() {
     if (mAccumulator.empty())
         de = mFS->mWorkingDirectory;
     else
-        de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
-
-    if (de.mIsFile)
-        throw InvalidOptionException(LS_FILE_ERROR);
+        de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
 
     // Get filenames
     auto fileNames = getDirectoryContents(mFS, de.mStartCluster);
@@ -320,15 +343,27 @@ bool LsCommand::validate_arguments() {
 }
 
 bool CatCommand::run() {
+    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                              EFileOption::FILE);
+    auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
+    auto fileData = readFile(mFS, clusters, de.mSize);
+    for (auto &it: fileData) {
+        std::cout << it;
+    }
+    std::cout << std::endl;
     return true;
 }
 
 bool CatCommand::validate_arguments() {
-    return mOptCount == 1;
+    if (mOptCount != 1) return false;
+    pathCheck(mOpt1);
+    mAccumulator = split(mOpt1, "/");
+    return true;
 }
 
 bool CdCommand::run() {
-    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
+    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                              EFileOption::DIRECTORY);
 
     if (de.mIsFile)
         throw InvalidOptionException(CD_FILE_ERROR);
@@ -351,40 +386,7 @@ bool CdCommand::validate_arguments() {
 }
 
 bool PwdCommand::run() {
-    if (mFS->mWorkingDirectory.mStartCluster == 0) {
-        std::cout << "/" << std::endl;
-        return true;
-    }
-
-    std::vector<std::string> fileNames{};
-
-    DirectoryEntry de = mFS->mWorkingDirectory;
-
-    int childCluster = de.mStartCluster, parentCluster;
-    int safetyCounter = 0;
-    while (true) {
-        safetyCounter++;
-        if (safetyCounter > MAX_ENTRIES)
-            throw std::runtime_error(CORRUPTED_FS_ERROR);
-
-        if (childCluster == 0) break;
-
-        if (!mFS->findDirectoryEntry(childCluster, "..", de, false))
-            throw std::runtime_error(CORRUPTED_FS_ERROR);
-
-        parentCluster = de.mStartCluster;
-
-        if (!mFS->findDirectoryEntry(parentCluster, childCluster, de))
-            throw std::runtime_error(CORRUPTED_FS_ERROR);
-
-        childCluster = parentCluster;
-
-        fileNames.push_back(de.mItemName);
-    }
-    for (auto it = fileNames.rbegin(); it != fileNames.rend(); ++it) {
-        std::cout << "/" << it->c_str();
-    }
-    std::cout << std::endl;
+    std::cout << mFS->getWorkingDirectoryPath() << std::endl;
     return true;
 }
 
@@ -402,8 +404,8 @@ bool InfoCommand::run() {
 
     auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
 
-    for (auto it{clusters.begin()}; it != std::prev(clusters.end()); it++) { // todo correct?
-        std::cout << *it << " ";
+    for (auto &it: clusters) {
+        std::cout << it << " ";
     }
     std::cout << std::endl;
 
@@ -437,7 +439,8 @@ bool IncpCommand::run() {
     if (mAccumulator.empty()) // we have had new name of file in accumulator
         parentDE = mFS->mWorkingDirectory;
     else
-        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
+        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                         EFileOption::DIRECTORY);
 
     if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName, true))
         throw InvalidOptionException(EXIST_ERROR);
@@ -470,11 +473,26 @@ bool IncpCommand::validate_arguments() {
 }
 
 bool OutcpCommand::run() {
+    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                              EFileOption::FILE);
+    auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
+    auto fileData = readFile(mFS, clusters, de.mSize);
+
+    std::ofstream stream(mOpt2, std::ios::binary);
+
+    if (!stream.good())
+        throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
+
+    stream.write((char *) &fileData[0], static_cast<int>(fileData.size()));
+
     return true;
 }
 
 bool OutcpCommand::validate_arguments() {
-    return mOptCount == 2;
+    if (mOptCount != 2) return false;
+    pathCheck(mOpt1);
+    mAccumulator = split(mOpt1, "/");
+    return true;
 }
 
 bool LoadCommand::run() {

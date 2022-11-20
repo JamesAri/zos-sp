@@ -6,10 +6,11 @@
 #include <utility>
 #include <vector>
 
-constexpr auto PROMPT_HEAD = "$ ";
+constexpr auto PROMPT_HEAD = " $ ";
+std::string path{"/"};
 
-bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<FileSystem>& pFS) {
-    if(arguments.empty()) return true;
+bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<FileSystem> &pFS) {
+    if (arguments.empty()) return true;
 
     auto command = arguments[0];
     const auto options = std::vector<std::string>(arguments.begin() + 1, arguments.end());
@@ -38,6 +39,7 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
             break;
         case ECommands::eCdCommand:
             CdCommand(options).registerFS(pFS).process();
+            path = pFS->getWorkingDirectoryPath();
             break;
         case ECommands::ePwdCommand:
             PwdCommand(options).registerFS(pFS).process();
@@ -69,12 +71,12 @@ bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<F
     return true;
 }
 
-void startConsole(const std::shared_ptr<FileSystem>& pFS) {
+void startConsole(const std::shared_ptr<FileSystem> &pFS) {
     bool run = true;
     std::string sInput;
     std::vector<std::string> args;
     do {
-        std::cout << PROMPT_HEAD;
+        std::cout << path + PROMPT_HEAD;
         std::getline(std::cin, sInput);
         args = split(sInput, ' ');
         try {
@@ -82,7 +84,7 @@ void startConsole(const std::shared_ptr<FileSystem>& pFS) {
         } catch (InvalidOptionException &ex) {
             std::cout << "fs: " << ex.what() << std::endl;
         }
-    } while(run);
+    } while (run);
 }
 
 int main(int argc, char **argv) {
