@@ -103,6 +103,8 @@ public:
 
     bool findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de);
 
+    bool editDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de);
+
     bool removeDirectoryEntry(int parentCluster, const std::string &itemName, bool isFile);
 
     int getDirectoryEntryCount(int cluster);
@@ -134,7 +136,7 @@ public:
 
     static void wipe(std::ostream &f, int32_t startAddress, int32_t clusterCount);
 
-    static std::vector<int> getFreeClusters(std::shared_ptr<FileSystem> &fs, int count = 1);
+    static std::vector<int> getFreeClusters(std::shared_ptr<FileSystem> &fs, int count = 1, bool ordered = false);
 };
 
 

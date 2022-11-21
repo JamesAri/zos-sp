@@ -723,9 +723,44 @@ bool FormatCommand::validateArguments() {
 }
 
 bool DefragCommand::run() {
+    auto fileDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::FILE);
+    mAccumulator.pop_back();
+    DirectoryEntry parentDE{};
+    if (mAccumulator.empty())
+        parentDE = mFS->mWorkingDirectory;
+    else
+        parentDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
+
+    auto clusters = getFatClusterChain(mFS, fileDE.mStartCluster, fileDE.mSize);
+    if (clusters.size() == 1) return true;
+    bool isOrdered = true;
+    for (int i = 1; i < clusters.size(); i++) {
+        if (clusters.at(i - 1) + 1 != clusters.at(i)) {
+            isOrdered = false;
+            break;
+        }
+    }
+    if (isOrdered) return true;
+
+    // Move data
+    auto fileData = readFile(mFS, clusters, fileDE.mSize);
+    writeFile(mFS, clusters, fileData);
+
+    // Label previous clusters as free
+    labelFatClusterChain(mFS, clusters, FAT_UNUSED);
+    // Get new continuous clusters
+    clusters = FAT::getFreeClusters(mFS, static_cast<int>(clusters.size()), true);
+    // Mark continuous clusters in FAT tables
+    makeFatChain(mFS, clusters);
+    // Edit directory entry
+    fileDE.mStartCluster = clusters.at(0);
+    mFS->editDirectoryEntry(parentDE.mStartCluster, fileDE.mStartCluster, fileDE);
     return true;
 }
 
 bool DefragCommand::validateArguments() {
-    return mOptCount == 2;
+    if (mOptCount != 1) return false;
+    pathCheck(mOpt1);
+    mAccumulator = split(mOpt1, "/");
+    return true;
 }

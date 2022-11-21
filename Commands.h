@@ -333,6 +333,8 @@ public:
     using ICommand::registerFS;
 
 private:
+    std::vector<std::string> mAccumulator;
+
     bool validateArguments() override;
 
     bool run() override;

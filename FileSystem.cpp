@@ -6,9 +6,6 @@
 #include <sstream>
 #include <cmath>
 
-
-
-
 DirectoryEntry::DirectoryEntry(const std::string &&itemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
     if (itemName.length() >= ITEM_NAME_LENGTH)
@@ -85,7 +82,7 @@ void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t clusterCount) {
     }
 }
 
-std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count) {
+std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count, bool ordered) {
     if (count > fs->mBootSector.mClusterCount)
         throw std::runtime_error("not enough space, format file system");
 
@@ -97,6 +94,12 @@ std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count
     for (int32_t i = 0; i < fs->mBootSector.mClusterCount && clusters.size() < count; i++) {
         readFromStream(fs->mStream, label);
         if (label == FAT_UNUSED) {
+            if(ordered && !clusters.empty()) {
+                if(clusters.back() + 1 != i) {
+                    clusters.clear();
+                    continue;
+                }
+            }
             clusters.push_back(i);
         }
     }
@@ -439,6 +442,25 @@ void FileSystem::updateWorkingDirectoryPath() {
 
 std::string FileSystem::getWorkingDirectoryPath() {
     return mWorkingDirectoryPath;
+}
+
+bool FileSystem::editDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de) {
+    seek(clusterToDataAddress(parentCluster));
+
+    DirectoryEntry tempDE{};
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        tempDE.read(mStream);
+        if (!isAllocatedDirectoryEntry(tempDE.mItemName)) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            return false;
+        }
+        if (tempDE.mStartCluster == childCluster) {
+            de = tempDE;
+            return true;
+        }
+    }
+    return false;
 }
 
 
