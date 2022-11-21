@@ -22,11 +22,7 @@ public:
 
     void write(std::fstream &f);
 
-    void write(std::fstream &f, int32_t pos);
-
     void read(std::fstream &f);
-
-    void read(std::fstream &f, int32_t pos);
 
     friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
 };

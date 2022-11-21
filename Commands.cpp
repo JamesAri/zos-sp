@@ -742,20 +742,20 @@ bool DefragCommand::run() {
     }
     if (isOrdered) return true;
 
-    // Move data
+    // Get data
     auto fileData = readFile(mFS, clusters, fileDE.mSize);
-    writeFile(mFS, clusters, fileData);
-
     // Label previous clusters as free
     labelFatClusterChain(mFS, clusters, FAT_UNUSED);
     // Get new continuous clusters
     clusters = FAT::getFreeClusters(mFS, static_cast<int>(clusters.size()), true);
+    // Write data
+    writeFile(mFS, clusters, fileData);
     // Mark continuous clusters in FAT tables
     makeFatChain(mFS, clusters);
     // Edit directory entry
+    int oldCluster = fileDE.mStartCluster;
     fileDE.mStartCluster = clusters.at(0);
-    mFS->editDirectoryEntry(parentDE.mStartCluster, fileDE.mStartCluster, fileDE);
-    return true;
+    return mFS->editDirectoryEntry(parentDE.mStartCluster, oldCluster, fileDE);
 }
 
 bool DefragCommand::validateArguments() {

@@ -28,22 +28,11 @@ void DirectoryEntry::write(std::fstream &f) {
     writeToStream(f, mStartCluster);
 }
 
-
-void DirectoryEntry::write(std::fstream &f, int32_t pos) {
-    f.seekp(pos);
-    write(f);
-}
-
 void DirectoryEntry::read(std::fstream &f) {
     readFromStream(f, mItemName, ITEM_NAME_LENGTH);
     readFromStream(f, mIsFile);
     readFromStream(f, mSize);
     readFromStream(f, mStartCluster);
-}
-
-void DirectoryEntry::read(std::fstream &f, int32_t pos) {
-    f.seekg(pos);
-    read(f);
 }
 
 std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
@@ -445,7 +434,8 @@ std::string FileSystem::getWorkingDirectoryPath() {
 }
 
 bool FileSystem::editDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de) {
-    seek(clusterToDataAddress(parentCluster));
+    auto startAddress = clusterToDataAddress(parentCluster);
+    seek(startAddress);
 
     DirectoryEntry tempDE{};
     for (int i = 0; i < MAX_ENTRIES; i++) {
@@ -456,7 +446,9 @@ bool FileSystem::editDirectoryEntry(int parentCluster, int childCluster, Directo
             return false;
         }
         if (tempDE.mStartCluster == childCluster) {
-            de = tempDE;
+            auto lastAddress = startAddress + i * DirectoryEntry::SIZE;
+            seek(lastAddress);
+            de.write(mStream);
             return true;
         }
     }
