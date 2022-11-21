@@ -162,10 +162,10 @@ std::vector<char> readFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &cl
     return buffer;
 }
 
-DirectoryEntry getLastDirectoryEntry(std::shared_ptr<FileSystem> &fs,
-                                     int startCluster,
-                                     std::vector<std::string> &fileNames,
-                                     EFileOption lastEntryOpt = EFileOption::UNSPECIFIED) {
+DirectoryEntry getPathLastDirectoryEntry(std::shared_ptr<FileSystem> &fs,
+                                         int startCluster,
+                                         std::vector<std::string> &fileNames,
+                                         EFileOption lastEntryOpt = EFileOption::UNSPECIFIED) {
     DirectoryEntry parentDE{};
 
     if (fileNames.empty())
@@ -173,7 +173,7 @@ DirectoryEntry getLastDirectoryEntry(std::shared_ptr<FileSystem> &fs,
 
     int curCluster = startCluster;
     for (int i = 0; i < fileNames.size() - 1; i++) {
-        if (fs->findDirectoryEntry(curCluster, fileNames.at(i), parentDE)) {
+        if (fs->findDirectoryEntry(curCluster, fileNames.at(i), parentDE, false)) {
             curCluster = parentDE.mStartCluster;
         } else {
             throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
@@ -200,8 +200,8 @@ bool CpCommand::run() {
     if (mAccumulator.empty())
         parentDE = mFS->mWorkingDirectory;
     else
-        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                         EFileOption::DIRECTORY);
+        parentDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                             EFileOption::DIRECTORY);
 
     if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName, true))
         throw InvalidOptionException(EXIST_ERROR);
@@ -232,8 +232,8 @@ bool CpCommand::validate_arguments() {
     pathCheck(mOpt2);
 
     auto fileNames = split(mOpt1, "/");
-    DirectoryEntry fromDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, fileNames,
-                                                  EFileOption::FILE);
+    DirectoryEntry fromDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, fileNames,
+                                                      EFileOption::FILE);
 
     mFromDE = fromDE;
     mAccumulator = split(mOpt2, "/");
@@ -241,9 +241,28 @@ bool CpCommand::validate_arguments() {
 }
 
 bool MvCommand::run() {
-    auto fromDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator1, EFileOption::FILE);
-    auto toDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator2, EFileOption::FILE);
-    mFS->removeDirectoryEntry(fromDE.mStartCluster);
+    auto fromDEFile = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator1,
+                                                EFileOption::FILE);
+    mAccumulator1.pop_back();
+    DirectoryEntry fromDEDirectory{};
+    if (mAccumulator1.empty())
+        fromDEDirectory = mFS->mWorkingDirectory;
+    else
+        fromDEDirectory = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator1,
+                                                    EFileOption::DIRECTORY);
+
+    auto newItemName = mAccumulator2.back();
+    mAccumulator2.pop_back();
+    DirectoryEntry toDEDirectory{};
+    if (mAccumulator2.empty())
+        toDEDirectory = mFS->mWorkingDirectory;
+    else
+        toDEDirectory = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator2,
+                                                  EFileOption::DIRECTORY);
+
+    mFS->removeDirectoryEntry(fromDEDirectory.mStartCluster, fromDEFile.mItemName, true);
+    fromDEFile.mItemName = newItemName;
+    writeNewDirectoryEntry(mFS, toDEDirectory.mStartCluster, fromDEFile);
     return true;
 }
 
@@ -272,8 +291,8 @@ bool MkdirCommand::run() {
     if (mAccumulator.empty()) // we have only new name of directory in accumulator
         parentDE = mFS->mWorkingDirectory;
     else
-        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                         EFileOption::DIRECTORY);
+        parentDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                             EFileOption::DIRECTORY);
 
     if (directoryEntryExists(mFS, parentDE.mStartCluster, newDirectoryName, false))
         throw InvalidOptionException(EXIST_ERROR);
@@ -308,7 +327,11 @@ bool RmdirCommand::run() {
     if (mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
         throw InvalidOptionException(NOT_EMPTY_ERROR);
 
-    return mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1, false);
+    mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, de.mItemName, false);
+    // label FAT cluster as unused
+    writeToFatByCluster(mFS, de.mStartCluster, FAT_UNUSED);
+//    FAT::write(mFS->mStream, mFS->clusterToFatAddress(de.mStartCluster), FAT_UNUSED);
+    return true;
 }
 
 bool RmdirCommand::validate_arguments() {
@@ -322,7 +345,7 @@ bool LsCommand::run() {
     if (mAccumulator.empty())
         de = mFS->mWorkingDirectory;
     else
-        de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
+        de = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
 
     // Get filenames
     auto fileNames = getDirectoryContents(mFS, de.mStartCluster);
@@ -343,8 +366,8 @@ bool LsCommand::validate_arguments() {
 }
 
 bool CatCommand::run() {
-    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                              EFileOption::FILE);
+    DirectoryEntry de = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                                  EFileOption::FILE);
     auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
     auto fileData = readFile(mFS, clusters, de.mSize);
     for (auto &it: fileData) {
@@ -362,8 +385,8 @@ bool CatCommand::validate_arguments() {
 }
 
 bool CdCommand::run() {
-    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                              EFileOption::DIRECTORY);
+    DirectoryEntry de = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                                  EFileOption::DIRECTORY);
 
     if (de.mIsFile)
         throw InvalidOptionException(CD_FILE_ERROR);
@@ -395,7 +418,7 @@ bool PwdCommand::validate_arguments() {
 }
 
 bool InfoCommand::run() {
-    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
+    DirectoryEntry de = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator);
 
     if (!de.mIsFile) {
         std::cout << de << std::endl;
@@ -439,8 +462,8 @@ bool IncpCommand::run() {
     if (mAccumulator.empty()) // we have had new name of file in accumulator
         parentDE = mFS->mWorkingDirectory;
     else
-        parentDE = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                         EFileOption::DIRECTORY);
+        parentDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                             EFileOption::DIRECTORY);
 
     if (directoryEntryExists(mFS, parentDE.mStartCluster, newFileName, true))
         throw InvalidOptionException(EXIST_ERROR);
@@ -473,8 +496,8 @@ bool IncpCommand::validate_arguments() {
 }
 
 bool OutcpCommand::run() {
-    DirectoryEntry de = getLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                              EFileOption::FILE);
+    DirectoryEntry de = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                                  EFileOption::FILE);
     auto clusters = getFatClusterChain(mFS, de.mStartCluster, de.mSize);
     auto fileData = readFile(mFS, clusters, de.mSize);
 

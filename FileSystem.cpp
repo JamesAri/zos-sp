@@ -322,7 +322,7 @@ bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
 bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &itemName, bool isFile) {
     auto itemNameCharArr = itemName.c_str();
 
-    if (!strcmp(itemNameCharArr, ".") || !strcmp(itemNameCharArr, "..")) return false;
+    if (!isFile && !strcmp(itemNameCharArr, ".") || !strcmp(itemNameCharArr, "..")) return false;
 
     auto startAddress = this->clusterToDataAddress(parentCluster);
     seek(startAddress);
@@ -346,8 +346,6 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
         }
         lastDE = tempDE;
         if (!erased && !strcmp(tempDE.mItemName.c_str(), itemNameCharArr) && tempDE.mIsFile == isFile) {
-            // label FAT cluster as unused
-            FAT::write(mStream, this->clusterToFatAddress(tempDE.mStartCluster), FAT_UNUSED);
             // remove entry from data cluster
             removeAddress = startAddress + i * DirectoryEntry::SIZE;
             seek(removeAddress);
