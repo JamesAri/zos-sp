@@ -401,6 +401,7 @@ void FileSystem::flush() {
 void FileSystem::updateWorkingDirectoryPath() {
     if (mWorkingDirectory.mStartCluster == 0) {
         mWorkingDirectoryPath = "/";
+        return;
     }
     std::queue<std::string> fileNames{};
 
