@@ -65,6 +65,12 @@ int readFromFatByCluster(std::shared_ptr<FileSystem> &fs, int cluster) {
  */
 void writeDirectoryEntryReferences(std::shared_ptr<FileSystem> &fs, DirectoryEntry &parentDE, DirectoryEntry &newDE,
                                    int newFreeCluster) {
+    // Erase previous cluster data
+    seekStreamToDataCluster(fs, newFreeCluster);
+    auto clusterSize = fs->mBootSector.mClusterSize;
+    char emptyCluster[CLUSTER_SIZE] = {'\00'};
+    fs->mStream.write(emptyCluster, clusterSize);
+
     // Create new directory "." at new cluster
     seekStreamToDataCluster(fs, newFreeCluster);
     newDE.mItemName = ".";
@@ -73,6 +79,8 @@ void writeDirectoryEntryReferences(std::shared_ptr<FileSystem> &fs, DirectoryEnt
     // Create new directory ".." at new cluster
     parentDE.mItemName = "..";
     parentDE.write(fs->mStream);
+
+
 }
 
 std::vector<std::string> getDirectoryContents(std::shared_ptr<FileSystem> &fs, int directoryCluster) {
@@ -96,11 +104,17 @@ bool directoryEntryExists(std::shared_ptr<FileSystem> &fs, int cluster, const st
     return fs->findDirectoryEntry(cluster, itemName, temp, isFile);
 }
 
-void labelFatChain(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters) {
+void makeFatChain(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters) {
     for (int i = 0; i < clusters.size() - 1; i++) {
         writeToFatByCluster(fs, clusters.at(i), clusters.at(i + 1));
     }
     writeToFatByCluster(fs, clusters.back(), FAT_FILE_END);
+}
+
+void labelFatClusterChain(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters, const int32_t label) {
+    for (auto &it : clusters) {
+        writeToFatByCluster(fs, it, label);
+    }
 }
 
 /**
@@ -213,7 +227,7 @@ bool CpCommand::run() {
     auto freeClusters = FAT::getFreeClusters(mFS, static_cast<int>(fromClusters.size()));
 
     // Mark clusters in FAT tables
-    labelFatChain(mFS, freeClusters);
+    makeFatChain(mFS, freeClusters);
 
     // Move data
     auto fileData = readFile(mFS, fromClusters, mFromDE.mSize);
@@ -276,12 +290,30 @@ bool MvCommand::validate_arguments() {
 }
 
 bool RmCommand::run() {
+    auto fileDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                                EFileOption::FILE);
+    mAccumulator.pop_back();
+    DirectoryEntry directoryDE{};
+    if (mAccumulator.empty())
+        directoryDE = mFS->mWorkingDirectory;
+    else
+        directoryDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                                    EFileOption::DIRECTORY);
+
+    auto clusters = getFatClusterChain(mFS, fileDE.mStartCluster, fileDE.mSize);
+    labelFatClusterChain(mFS, clusters, FAT_UNUSED);
+    mFS->removeDirectoryEntry(directoryDE.mStartCluster, fileDE.mItemName, true);
     return true;
 }
 
 bool RmCommand::validate_arguments() {
-    return mOptCount == 2;
+    if (mOptCount != 1) return false;
+    pathCheck(mOpt1);
+    mAccumulator = split(mOpt1, "/");
+    return true;
 }
+
+
 
 bool MkdirCommand::run() {
     auto newDirectoryName = mAccumulator.back();
@@ -330,12 +362,12 @@ bool RmdirCommand::run() {
     mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, de.mItemName, false);
     // label FAT cluster as unused
     writeToFatByCluster(mFS, de.mStartCluster, FAT_UNUSED);
-//    FAT::write(mFS->mStream, mFS->clusterToFatAddress(de.mStartCluster), FAT_UNUSED);
     return true;
 }
 
 bool RmdirCommand::validate_arguments() {
     if (mOptCount != 1) return false;
+    // todo path
     return validateFileName(mOpt1);
 }
 
@@ -450,7 +482,7 @@ bool IncpCommand::run() {
     auto clusters = FAT::getFreeClusters(mFS, neededClusters);
 
     // Mark clusters in FAT tables
-    labelFatChain(mFS, clusters);
+    makeFatChain(mFS, clusters);
 
     // Move data
     writeFile(mFS, clusters, mBuffer);
