@@ -112,7 +112,7 @@ void makeFatChain(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters) {
 }
 
 void labelFatClusterChain(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters, const int32_t label) {
-    for (auto &it : clusters) {
+    for (auto &it: clusters) {
         writeToFatByCluster(fs, it, label);
     }
 }
@@ -206,6 +206,10 @@ DirectoryEntry getPathLastDirectoryEntry(std::shared_ptr<FileSystem> &fs,
 }
 
 
+//===============================================================================
+//                                COMMANDS                                     //
+//===============================================================================
+
 bool CpCommand::run() {
     auto newFileName = mAccumulator.back();
     mAccumulator.pop_back();
@@ -239,7 +243,7 @@ bool CpCommand::run() {
     return true;
 }
 
-bool CpCommand::validate_arguments() {
+bool CpCommand::validateArguments() {
     if (mOptCount != 2) return false;
 
     pathCheck(mOpt1);
@@ -280,7 +284,7 @@ bool MvCommand::run() {
     return true;
 }
 
-bool MvCommand::validate_arguments() {
+bool MvCommand::validateArguments() {
     if (mOptCount != 2) return false;
     pathCheck(mOpt1);
     pathCheck(mOpt2);
@@ -291,14 +295,14 @@ bool MvCommand::validate_arguments() {
 
 bool RmCommand::run() {
     auto fileDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                                EFileOption::FILE);
+                                            EFileOption::FILE);
     mAccumulator.pop_back();
     DirectoryEntry directoryDE{};
     if (mAccumulator.empty())
         directoryDE = mFS->mWorkingDirectory;
     else
         directoryDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
-                                                    EFileOption::DIRECTORY);
+                                                EFileOption::DIRECTORY);
 
     auto clusters = getFatClusterChain(mFS, fileDE.mStartCluster, fileDE.mSize);
     labelFatClusterChain(mFS, clusters, FAT_UNUSED);
@@ -306,13 +310,12 @@ bool RmCommand::run() {
     return true;
 }
 
-bool RmCommand::validate_arguments() {
+bool RmCommand::validateArguments() {
     if (mOptCount != 1) return false;
     pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
     return true;
 }
-
 
 
 bool MkdirCommand::run() {
@@ -343,7 +346,7 @@ bool MkdirCommand::run() {
     return true;
 }
 
-bool MkdirCommand::validate_arguments() {
+bool MkdirCommand::validateArguments() {
     if (mOptCount != 1) return false;
     pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
@@ -351,24 +354,32 @@ bool MkdirCommand::validate_arguments() {
 }
 
 bool RmdirCommand::run() {
-    DirectoryEntry de{};
+    auto toRemoveDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
+    mAccumulator.pop_back();
 
-    if (!mFS->findDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, mOpt1, de, false))
-        throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
+    DirectoryEntry parentDE{};
+    if (mAccumulator.empty())
+        parentDE = mFS->mWorkingDirectory;
+    else
+        parentDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
 
-    if (mFS->getDirectoryEntryCount(de.mStartCluster) > DEFAULT_DIR_SIZE)
+    if (mFS->getDirectoryEntryCount(toRemoveDE.mStartCluster) > DEFAULT_DIR_SIZE)
         throw InvalidOptionException(NOT_EMPTY_ERROR);
 
-    mFS->removeDirectoryEntry(mFS->mWorkingDirectory.mStartCluster, de.mItemName, false);
-    // label FAT cluster as unused
-    writeToFatByCluster(mFS, de.mStartCluster, FAT_UNUSED);
+    bool removed = mFS->removeDirectoryEntry(parentDE.mStartCluster, toRemoveDE.mItemName, false);
+
+    if (!removed) throw InvalidOptionException(DELETE_DIR_REFERENCE_ERROR);
+
+    writeToFatByCluster(mFS, toRemoveDE.mStartCluster, FAT_UNUSED);
+
     return true;
 }
 
-bool RmdirCommand::validate_arguments() {
+bool RmdirCommand::validateArguments() {
     if (mOptCount != 1) return false;
-    // todo path
-    return validateFileName(mOpt1);
+    pathCheck(mOpt1);
+    mAccumulator = split(mOpt1, "/");
+    return true;
 }
 
 bool LsCommand::run() {
@@ -389,7 +400,7 @@ bool LsCommand::run() {
     return true;
 }
 
-bool LsCommand::validate_arguments() {
+bool LsCommand::validateArguments() {
     if (mOptCount == 0) return true;
     if (mOptCount != 1) return false;
     pathCheck(mOpt1);
@@ -409,7 +420,7 @@ bool CatCommand::run() {
     return true;
 }
 
-bool CatCommand::validate_arguments() {
+bool CatCommand::validateArguments() {
     if (mOptCount != 1) return false;
     pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
@@ -433,7 +444,7 @@ bool CdCommand::run() {
     return true;
 }
 
-bool CdCommand::validate_arguments() {
+bool CdCommand::validateArguments() {
     if (mOptCount != 1) return false;
     pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
@@ -445,7 +456,7 @@ bool PwdCommand::run() {
     return true;
 }
 
-bool PwdCommand::validate_arguments() {
+bool PwdCommand::validateArguments() {
     return mOptCount == 0;
 }
 
@@ -467,7 +478,7 @@ bool InfoCommand::run() {
     return true;
 }
 
-bool InfoCommand::validate_arguments() {
+bool InfoCommand::validateArguments() {
     if (mOptCount != 1) return false;
     pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
@@ -505,7 +516,7 @@ bool IncpCommand::run() {
     return true;
 }
 
-bool IncpCommand::validate_arguments() {
+bool IncpCommand::validateArguments() {
     if (mOptCount != 2) return false;
 
     std::ifstream stream(mOpt1, std::ios::binary | std::ios::ate);
@@ -543,7 +554,7 @@ bool OutcpCommand::run() {
     return true;
 }
 
-bool OutcpCommand::validate_arguments() {
+bool OutcpCommand::validateArguments() {
     if (mOptCount != 2) return false;
     pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
@@ -554,7 +565,7 @@ bool LoadCommand::run() {
     return true;
 }
 
-bool LoadCommand::validate_arguments() {
+bool LoadCommand::validateArguments() {
     return mOptCount == 1;
 }
 
@@ -568,7 +579,7 @@ bool FormatCommand::run() {
     return true;
 }
 
-bool FormatCommand::validate_arguments() {
+bool FormatCommand::validateArguments() {
     if (mOptCount != 1) return false;
 
     std::transform(mOpt1.begin(), mOpt1.end(), mOpt1.begin(),
@@ -591,6 +602,6 @@ bool DefragCommand::run() {
     return true;
 }
 
-bool DefragCommand::validate_arguments() {
+bool DefragCommand::validateArguments() {
     return mOptCount == 2;
 }

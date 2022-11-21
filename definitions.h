@@ -37,6 +37,7 @@ const std::string LS_FILE_ERROR{"cannot list file"};
 const std::string CD_FILE_ERROR{"cannot cd into file"};
 const std::string INVALID_DIR_PATH_ERROR{"invalid directory path"};
 const std::string INVALID_FILE_NAME_ERROR{"invalid file name"};
+const std::string DELETE_DIR_REFERENCE_ERROR{"cannot delete directory reference"};
 
 // Runtime recoverable errors (from specification)
 const std::string PATH_NOT_FOUND_ERROR{"PATH NOT FOUND"};
@@ -44,6 +45,7 @@ const std::string FILE_NOT_FOUND_ERROR{"FILE NOT FOUND"};
 const std::string CANNOT_CREATE_FILE_ERROR{"CANNOT CREATE FILE"};
 const std::string EXIST_ERROR{"EXIST"};
 const std::string NOT_EMPTY_ERROR{"NOT EMPTY"};
+
 
 
 #endif //ZOS_SP_DEFINITIONS_H

@@ -24,7 +24,7 @@ public:
 
 class ICommand {
 private:
-    virtual bool validate_arguments() = 0;
+    virtual bool validateArguments() = 0;
 
     virtual bool run() = 0;
 

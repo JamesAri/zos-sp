@@ -63,7 +63,7 @@ private:
     std::vector<std::string> mAccumulator;
     DirectoryEntry mFromDE;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -87,7 +87,7 @@ private:
     std::vector<std::string> mAccumulator1;
     std::vector<std::string> mAccumulator2;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -108,7 +108,7 @@ public:
 private:
     std::vector<std::string> mAccumulator;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -131,7 +131,7 @@ public:
 private:
     std::vector<std::string> mAccumulator;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -152,7 +152,9 @@ public:
     using ICommand::registerFS;
 
 private:
-    bool validate_arguments() override;
+    std::vector<std::string> mAccumulator;
+
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -176,7 +178,7 @@ public:
 private:
     std::vector<std::string> mAccumulator;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -198,7 +200,7 @@ public:
 private:
     std::vector<std::string> mAccumulator;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -220,7 +222,7 @@ public:
 private:
     std::vector<std::string> mAccumulator;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -239,7 +241,7 @@ public:
     using ICommand::registerFS;
 
 private:
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -261,7 +263,7 @@ public:
 private:
     std::vector<std::string> mAccumulator;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -285,7 +287,7 @@ private:
     std::vector<std::string> mAccumulator;
     std::vector<char> mBuffer;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -308,7 +310,7 @@ public:
 private:
     std::vector<std::string> mAccumulator;
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -329,7 +331,7 @@ public:
     using ICommand::registerFS;
 
 private:
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -351,7 +353,7 @@ public:
     using ICommand::registerFS;
 private:
 
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };
@@ -370,7 +372,7 @@ public:
     using ICommand::registerFS;
 
 private:
-    bool validate_arguments() override;
+    bool validateArguments() override;
 
     bool run() override;
 };

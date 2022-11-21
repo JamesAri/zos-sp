@@ -8,7 +8,7 @@ ICommand::ICommand(const std::vector<std::string> &options) {
 }
 
 void ICommand::process() {
-    if (!this->validate_arguments()) {
+    if (!this->validateArguments()) {
         throw InvalidOptionException("invalid option(s)");
     }
     if (this->run()) {

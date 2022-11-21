@@ -6,44 +6,44 @@
 #include <sstream>
 #include <cmath>
 
-DirectoryEntry::DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster) :
+DirectoryEntry::DirectoryEntry(const std::string &&itemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
-    if (mItemName.length() >= ITEM_NAME_LENGTH)
+    if (itemName.length() >= ITEM_NAME_LENGTH)
         throw std::runtime_error(DE_ITEM_NAME_LENGTH_ERROR);
-    this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
+    mItemName = itemName + std::string(ITEM_NAME_LENGTH - itemName.length(), '\00');
 }
 
-DirectoryEntry::DirectoryEntry(const std::string &mItemName, bool mIsFile, int mSize, int mStartCluster) :
+DirectoryEntry::DirectoryEntry(const std::string &itemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
-    if (mItemName.length() >= ITEM_NAME_LENGTH) {
+    if (itemName.length() >= ITEM_NAME_LENGTH) {
         throw std::runtime_error(DE_ITEM_NAME_LENGTH_ERROR);
     }
-    this->mItemName = mItemName + std::string(ITEM_NAME_LENGTH - mItemName.length(), '\00');
+    mItemName = itemName + std::string(ITEM_NAME_LENGTH - itemName.length(), '\00');
 }
 
 void DirectoryEntry::write(std::fstream &f) {
-    writeToStream(f, this->mItemName, ITEM_NAME_LENGTH);
-    writeToStream(f, this->mIsFile);
-    writeToStream(f, this->mSize);
-    writeToStream(f, this->mStartCluster);
+    writeToStream(f, mItemName, ITEM_NAME_LENGTH);
+    writeToStream(f, mIsFile);
+    writeToStream(f, mSize);
+    writeToStream(f, mStartCluster);
 }
 
 
 void DirectoryEntry::write(std::fstream &f, int32_t pos) {
     f.seekp(pos);
-    this->write(f);
+    write(f);
 }
 
 void DirectoryEntry::read(std::fstream &f) {
-    readFromStream(f, this->mItemName, ITEM_NAME_LENGTH);
-    readFromStream(f, this->mIsFile);
-    readFromStream(f, this->mSize);
-    readFromStream(f, this->mStartCluster);
+    readFromStream(f, mItemName, ITEM_NAME_LENGTH);
+    readFromStream(f, mIsFile);
+    readFromStream(f, mSize);
+    readFromStream(f, mStartCluster);
 }
 
 void DirectoryEntry::read(std::fstream &f, int32_t pos) {
     f.seekg(pos);
-    this->read(f);
+    read(f);
 }
 
 std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
@@ -106,45 +106,45 @@ std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count
 
 
 BootSector::BootSector(int diskSize) : mDiskSize(diskSize * FORMAT_UNIT) {
-    this->mSignature = SIGNATURE;
-    this->mClusterSize = CLUSTER_SIZE;
-    this->mFatCount = FAT_COUNT;
+    mSignature = SIGNATURE;
+    mClusterSize = CLUSTER_SIZE;
+    mFatCount = FAT_COUNT;
 
-    size_t freeSpaceInBytes = this->mDiskSize - BootSector::SIZE;
-    this->mClusterCount = static_cast<int>(freeSpaceInBytes / (sizeof(int32_t) + this->mClusterSize));
-    this->mFatSize = static_cast<int>(this->mClusterCount * sizeof(int32_t));
-    this->mFat1StartAddress = BootSector::SIZE;
+    size_t freeSpaceInBytes = mDiskSize - BootSector::SIZE;
+    mClusterCount = static_cast<int>(freeSpaceInBytes / (sizeof(int32_t) + mClusterSize));
+    mFatSize = static_cast<int>(mClusterCount * sizeof(int32_t));
+    mFat1StartAddress = BootSector::SIZE;
 
-    size_t dataSize = this->mClusterCount * this->mClusterSize;
-    size_t fatTablesSize = this->mFatSize * this->mFatCount;
-    this->mPaddingSize = static_cast<int>(freeSpaceInBytes - (dataSize + fatTablesSize));
+    size_t dataSize = mClusterCount * mClusterSize;
+    size_t fatTablesSize = mFatSize * mFatCount;
+    mPaddingSize = static_cast<int>(freeSpaceInBytes - (dataSize + fatTablesSize));
 
-    auto fatEndAddress = this->mFat1StartAddress + this->mFatSize;
-    this->mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
+    auto fatEndAddress = mFat1StartAddress + mFatSize;
+    mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
 }
 
 void BootSector::write(std::fstream &f) {
-    writeToStream(f, this->mSignature, SIGNATURE_LENGTH);
-    writeToStream(f, this->mClusterSize);
-    writeToStream(f, this->mClusterCount);
-    writeToStream(f, this->mDiskSize);
-    writeToStream(f, this->mFatCount);
-    writeToStream(f, this->mFat1StartAddress);
-    writeToStream(f, this->mDataStartAddress);
-    writeToStream(f, this->mPaddingSize);
+    writeToStream(f, mSignature, SIGNATURE_LENGTH);
+    writeToStream(f, mClusterSize);
+    writeToStream(f, mClusterCount);
+    writeToStream(f, mDiskSize);
+    writeToStream(f, mFatCount);
+    writeToStream(f, mFat1StartAddress);
+    writeToStream(f, mDataStartAddress);
+    writeToStream(f, mPaddingSize);
 }
 
 void BootSector::read(std::fstream &f) {
-    readFromStream(f, this->mSignature, SIGNATURE_LENGTH);
-    readFromStream(f, this->mClusterSize);
-    readFromStream(f, this->mClusterCount);
-    readFromStream(f, this->mDiskSize);
-    readFromStream(f, this->mFatCount);
-    readFromStream(f, this->mFat1StartAddress);
-    readFromStream(f, this->mDataStartAddress);
-    readFromStream(f, this->mPaddingSize);
+    readFromStream(f, mSignature, SIGNATURE_LENGTH);
+    readFromStream(f, mClusterSize);
+    readFromStream(f, mClusterCount);
+    readFromStream(f, mDiskSize);
+    readFromStream(f, mFatCount);
+    readFromStream(f, mFat1StartAddress);
+    readFromStream(f, mDataStartAddress);
+    readFromStream(f, mPaddingSize);
 
-    this->mFatSize = static_cast<int>(this->mClusterCount * sizeof(int32_t));
+    mFatSize = static_cast<int>(mClusterCount * sizeof(int32_t));
 }
 
 std::ostream &operator<<(std::ostream &os, BootSector const &bs) {
@@ -188,9 +188,9 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
 }
 
 void FileSystem::readVFS() {
-    this->mBootSector.read(mStream);
-    seek(this->mBootSector.mDataStartAddress);
-    this->mWorkingDirectory.read(mStream);
+    mBootSector.read(mStream);
+    seek(mBootSector.mDataStartAddress);
+    mWorkingDirectory.read(mStream);
 }
 
 std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
@@ -204,33 +204,33 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 
 void FileSystem::formatFS(int diskSize) {
     // Write boot-sector
-    this->mBootSector = BootSector{diskSize};
-    this->mBootSector.write(mStream);
+    mBootSector = BootSector{diskSize};
+    mBootSector.write(mStream);
 
     // Wipe each data cluster
-    seek(this->mBootSector.mDataStartAddress);
+    seek(mBootSector.mDataStartAddress);
     char wipedCluster[CLUSTER_SIZE] = {'\00'};
-    for (int i = 0; i < this->mBootSector.mClusterCount; i++) {
+    for (int i = 0; i < mBootSector.mClusterCount; i++) {
         writeToStream(mStream, wipedCluster, CLUSTER_SIZE);
     }
 
     // Make root directory
     DirectoryEntry rootDir{std::string("."), false, 0, 0};
     DirectoryEntry rootDir2{std::string(".."), false, 0, 0}; // do i need it? todo
-    this->mWorkingDirectory = rootDir;
-    seek(this->mBootSector.mDataStartAddress);
+    mWorkingDirectory = rootDir;
+    seek(mBootSector.mDataStartAddress);
     rootDir.write(mStream);
     rootDir2.write(mStream);
 
     // Wipe FAT tables
-    FAT::wipe(mStream, this->mBootSector.mFat1StartAddress, this->mBootSector.mClusterCount);
+    FAT::wipe(mStream, mBootSector.mFat1StartAddress, mBootSector.mClusterCount);
 
     // Label root directory cluster in FAT
-    FAT::write(mStream, this->mBootSector.mFat1StartAddress, FAT_FILE_END);
+    FAT::write(mStream, mBootSector.mFat1StartAddress, FAT_FILE_END);
 }
 
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de) {
-    seek(this->clusterToDataAddress(cluster));
+    seek(clusterToDataAddress(cluster));
 
     DirectoryEntry tempDE{};
     auto itemNameCharArr = itemName.c_str();
@@ -254,7 +254,7 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
  * copies the found data into passed object.
  */
 bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, DirectoryEntry &de, bool isFile) {
-    seek(this->clusterToDataAddress(cluster));
+    seek(clusterToDataAddress(cluster));
 
     DirectoryEntry tempDE{};
     auto itemNameCharArr = itemName.c_str();
@@ -265,7 +265,8 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
                 throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
             return false;
         }
-        if (!strcmp(tempDE.mItemName.c_str(), itemNameCharArr) && tempDE.mIsFile == isFile) { // ignore \00 (NULL) paddings
+        if (!strcmp(tempDE.mItemName.c_str(), itemNameCharArr) &&
+            tempDE.mIsFile == isFile) { // ignore \00 (NULL) paddings
             de = tempDE;
             return true;
         }
@@ -274,7 +275,7 @@ bool FileSystem::findDirectoryEntry(int cluster, const std::string &itemName, Di
 }
 
 bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, DirectoryEntry &de) {
-    seek(this->clusterToDataAddress(parentCluster));
+    seek(clusterToDataAddress(parentCluster));
 
     DirectoryEntry tempDE{};
     for (int i = 0; i < MAX_ENTRIES; i++) {
@@ -301,7 +302,7 @@ bool FileSystem::findDirectoryEntry(int parentCluster, int childCluster, Directo
 bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
     DirectoryEntry toFindDE{}, parentDE{};
 
-    seek(this->clusterToDataAddress(cluster));
+    seek(clusterToDataAddress(cluster));
 
     toFindDE.read(mStream);
     if (!isAllocatedDirectoryEntry(toFindDE.mItemName)) return false;
@@ -309,7 +310,7 @@ bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
     parentDE.read(mStream);
     if (!isAllocatedDirectoryEntry(parentDE.mItemName)) return false;
 
-    if (this->findDirectoryEntry(parentDE.mStartCluster, toFindDE.mStartCluster, toFindDE)) {
+    if (findDirectoryEntry(parentDE.mStartCluster, toFindDE.mStartCluster, toFindDE)) {
         de = toFindDE;
         return true;
     }
@@ -322,9 +323,9 @@ bool FileSystem::getDirectory(int cluster, DirectoryEntry &de) {
 bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &itemName, bool isFile) {
     auto itemNameCharArr = itemName.c_str();
 
-    if (!isFile && !strcmp(itemNameCharArr, ".") || !strcmp(itemNameCharArr, "..")) return false;
+    if (!isFile && (!strcmp(itemNameCharArr, ".") || !strcmp(itemNameCharArr, ".."))) return false;
 
-    auto startAddress = this->clusterToDataAddress(parentCluster);
+    auto startAddress = clusterToDataAddress(parentCluster);
     seek(startAddress);
     int32_t removeAddress;
 
@@ -358,7 +359,7 @@ bool FileSystem::removeDirectoryEntry(int parentCluster, const std::string &item
 }
 
 int FileSystem::getDirectoryEntryCount(int cluster) {
-    seek(this->clusterToDataAddress(cluster));
+    seek(clusterToDataAddress(cluster));
 
     int i;
     DirectoryEntry tempDE{};
@@ -374,15 +375,15 @@ int FileSystem::getDirectoryEntryCount(int cluster) {
 }
 
 int FileSystem::getNeededClustersCount(int fileSize) const {
-    return std::ceil(fileSize / static_cast<double>(this->mBootSector.mClusterSize));
+    return std::ceil(fileSize / static_cast<double>(mBootSector.mClusterSize));
 }
 
 int FileSystem::clusterToDataAddress(int cluster) const {
-    return this->mBootSector.mDataStartAddress + cluster * this->mBootSector.mClusterSize;
+    return mBootSector.mDataStartAddress + cluster * mBootSector.mClusterSize;
 }
 
 int FileSystem::clusterToFatAddress(int cluster) const {
-    return this->mBootSector.mFat1StartAddress + cluster * static_cast<int32_t>(sizeof(int32_t));
+    return mBootSector.mFat1StartAddress + cluster * static_cast<int32_t>(sizeof(int32_t));
 }
 
 void FileSystem::seek(int pos) {
