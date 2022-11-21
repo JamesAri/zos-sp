@@ -5,7 +5,7 @@
 
 bool validateFileName(const std::string &fileName);
 
-bool validateFilePath(const std::string &fileName);
+bool validateFilePath(const std::string &path);
 
 bool isAllocatedDirectoryEntry(const std::string &itemName);
 

@@ -126,7 +126,7 @@ void labelFatClusterChain(std::shared_ptr<FileSystem> &fs, std::vector<int> &clu
 std::vector<int> getFatClusterChain(std::shared_ptr<FileSystem> &fs, int fromCluster, int fileSize) {
     int clusterCount = fs->getNeededClustersCount(fileSize);
 
-    if (clusterCount > MAX_ENTRIES)
+    if (clusterCount > fs->mBootSector.mClusterCount)
         throw std::runtime_error("internal error, incorrect cluster count");
 
     std::vector<int> clusters{};
@@ -576,6 +576,7 @@ bool FormatCommand::run() {
         std::cerr << "internal error, couldn't format file system" << std::endl;
         exit(1);
     }
+    std::cout << *mFS << std::endl;
     return true;
 }
 

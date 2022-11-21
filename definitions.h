@@ -12,7 +12,7 @@ const int32_t FAT_BAD_CLUSTER = INT32_MAX - 3; // ffff fffc
 constexpr auto SIGNATURE = "A20B0234P\00";
 constexpr auto SIGNATURE_LENGTH = 10; // with EOF
 
-constexpr auto DEFAULT_FORMAT_SIZE = 1; // MB
+constexpr auto DEFAULT_FORMAT_SIZE = 15; // MB
 constexpr auto FORMAT_UNIT = 1'000'000; // MB -> B
 const std::vector<std::string> ALLOWED_FORMATS{"MB"};
 

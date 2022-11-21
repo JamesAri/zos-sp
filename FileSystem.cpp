@@ -83,7 +83,7 @@ void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t clusterCount) {
 }
 
 std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count) {
-    if (count > MAX_ENTRIES)
+    if (count > fs->mBootSector.mClusterCount)
         throw std::runtime_error("not enough space, format file system");
 
     fs->seek(fs->mBootSector.mFat1StartAddress);
@@ -165,18 +165,10 @@ bool fileExists(const std::string &fileName) {
 }
 
 FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
-    unsigned int mode;
     bool exists = fileExists(fileName);
-    if (exists)
-        mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::ate;
-    else
-        mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
-
-    mStream = std::fstream(mFileName, mode);
 
     if (exists) {
         try {
-            mStream.seekg(0, std::ios::beg);
             readVFS();
         } catch (...) {
             std::cerr << "An error occurred during the loading process.\nInput file might be corrupted." << std::endl;
@@ -188,6 +180,11 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
 }
 
 void FileSystem::readVFS() {
+    if(!mStream.is_open()) mStream.close();
+    auto mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::ate;
+    mStream = std::fstream(mFileName, mode);
+    mStream.seekg(0, std::ios::beg);
+
     mBootSector.read(mStream);
     seek(mBootSector.mDataStartAddress);
     mWorkingDirectory.read(mStream);
@@ -203,6 +200,10 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 }
 
 void FileSystem::formatFS(int diskSize) {
+    if(!mStream.is_open()) mStream.close();
+    auto mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
+    mStream = std::fstream(mFileName, mode);
+
     // Write boot-sector
     mBootSector = BootSector{diskSize};
     mBootSector.write(mStream);
