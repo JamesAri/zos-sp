@@ -42,7 +42,7 @@ bool is_number(const std::string &s) {
 }
 
 /**
- * Splits string by delimiter and ignores whitespaces.
+ * Splits string by delimiter and doesn't return empty/whitespace tokens.
  */
 std::vector<std::string> split(const std::string &s, const std::string &delimiter) {
     size_t posStart = 0, posEnd, delimLen = delimiter.length();

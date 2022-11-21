@@ -2,48 +2,9 @@
 #define ZOS_SP_COMMANDS_H
 
 #include "ICommand.h"
-#include "FileSystem.h"
 
-enum class ECommands {
-    eCpCommand,
-    eMvCommand,
-    eRmCommand,
-    eMkdirCommand,
-    eRmdirCommand,
-    eLsCommand,
-    eCatCommand,
-    eCdCommand,
-    ePwdCommand,
-    eInfoCommand,
-    eIncpCommand,
-    eOutcpCommand,
-    eLoadCommand,
-    eFormatCommand,
-    eDefragCommand,
-    // commands with no class
-    eExitCommand,
-    eUnknownCommand,
-};
+bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<FileSystem> &pFS);
 
-constexpr ECommands getCommandCode(std::string const &string) {
-    if (string == "cp") return ECommands::eCpCommand;
-    if (string == "mv") return ECommands::eMvCommand;
-    if (string == "rm") return ECommands::eRmCommand;
-    if (string == "mkdir") return ECommands::eMkdirCommand;
-    if (string == "rmdir") return ECommands::eRmdirCommand;
-    if (string == "ls") return ECommands::eLsCommand;
-    if (string == "cat") return ECommands::eCatCommand;
-    if (string == "cd") return ECommands::eCdCommand;
-    if (string == "pwd") return ECommands::ePwdCommand;
-    if (string == "info") return ECommands::eInfoCommand;
-    if (string == "incp") return ECommands::eIncpCommand;
-    if (string == "outcp") return ECommands::eOutcpCommand;
-    if (string == "load") return ECommands::eLoadCommand;
-    if (string == "format") return ECommands::eFormatCommand;
-    if (string == "defrag") return ECommands::eDefragCommand;
-    if (string == "exit") return ECommands::eExitCommand;
-    return ECommands::eUnknownCommand;
-}
 
 /**
 Zkopíruje soubor s1 do umístění s2

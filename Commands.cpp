@@ -12,6 +12,109 @@ enum class EFileOption {
     UNSPECIFIED,
 };
 
+enum class ECommands {
+    eCpCommand,
+    eMvCommand,
+    eRmCommand,
+    eMkdirCommand,
+    eRmdirCommand,
+    eLsCommand,
+    eCatCommand,
+    eCdCommand,
+    ePwdCommand,
+    eInfoCommand,
+    eIncpCommand,
+    eOutcpCommand,
+    eLoadCommand,
+    eFormatCommand,
+    eDefragCommand,
+    // commands with no class
+    eExitCommand,
+    eUnknownCommand,
+};
+
+constexpr ECommands getCommandCode(std::string const &string) {
+    if (string == "cp") return ECommands::eCpCommand;
+    if (string == "mv") return ECommands::eMvCommand;
+    if (string == "rm") return ECommands::eRmCommand;
+    if (string == "mkdir") return ECommands::eMkdirCommand;
+    if (string == "rmdir") return ECommands::eRmdirCommand;
+    if (string == "ls") return ECommands::eLsCommand;
+    if (string == "cat") return ECommands::eCatCommand;
+    if (string == "cd") return ECommands::eCdCommand;
+    if (string == "pwd") return ECommands::ePwdCommand;
+    if (string == "info") return ECommands::eInfoCommand;
+    if (string == "incp") return ECommands::eIncpCommand;
+    if (string == "outcp") return ECommands::eOutcpCommand;
+    if (string == "load") return ECommands::eLoadCommand;
+    if (string == "format") return ECommands::eFormatCommand;
+    if (string == "defrag") return ECommands::eDefragCommand;
+    if (string == "exit") return ECommands::eExitCommand;
+    return ECommands::eUnknownCommand;
+}
+
+bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<FileSystem> &pFS) {
+    if (arguments.empty()) return true;
+
+    auto command = arguments[0];
+    const auto options = std::vector<std::string>(arguments.begin() + 1, arguments.end());
+
+    switch (getCommandCode(command)) {
+        case ECommands::eCpCommand:
+            CpCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eMvCommand:
+            MvCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eRmCommand:
+            RmCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eMkdirCommand:
+            MkdirCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eRmdirCommand:
+            RmdirCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eLsCommand:
+            LsCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eCatCommand:
+            CatCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eCdCommand:
+            CdCommand(options).registerFS(pFS).process();
+            pFS->updateWorkingDirectoryPath();
+            break;
+        case ECommands::ePwdCommand:
+            PwdCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eInfoCommand:
+            InfoCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eIncpCommand:
+            IncpCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eOutcpCommand:
+            OutcpCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eLoadCommand:
+            LoadCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eFormatCommand:
+            FormatCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eDefragCommand:
+            DefragCommand(options).registerFS(pFS).process();
+            break;
+        case ECommands::eExitCommand:
+            return false;
+        case ECommands::eUnknownCommand:
+            std::cout << "fs: Unknown command: " << command << std::endl;
+            break;
+    }
+    return true;
+}
+
 void pathCheck(const std::string &path) {
     if (!validateFilePath(path))
         throw InvalidOptionException(INVALID_DIR_PATH_ERROR);
@@ -152,6 +255,7 @@ void writeFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters, std:
 
     int clusterSize = fs->mBootSector.mClusterSize;
     int trailingBytes = filesSize % clusterSize;
+    trailingBytes = trailingBytes ? trailingBytes : clusterSize;
 
     for (int i = 0; i < clusters.size() - 1; i++) {
         seekStreamToDataCluster(fs, clusters.at(i));
@@ -165,6 +269,7 @@ void writeFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters, std:
 std::vector<char> readFile(std::shared_ptr<FileSystem> &fs, std::vector<int> &clusters, int fileSize) {
     int clusterSize = fs->mBootSector.mClusterSize;
     int trailingBytes = fileSize % clusterSize;
+    trailingBytes = trailingBytes ? trailingBytes : clusterSize;
 
     std::vector<char> buffer(fileSize);
     for (int i = 0; i < clusters.size() - 1; i++) {
@@ -354,14 +459,16 @@ bool MkdirCommand::validateArguments() {
 }
 
 bool RmdirCommand::run() {
-    auto toRemoveDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
+    auto toRemoveDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                                EFileOption::DIRECTORY);
     mAccumulator.pop_back();
 
     DirectoryEntry parentDE{};
     if (mAccumulator.empty())
         parentDE = mFS->mWorkingDirectory;
     else
-        parentDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator, EFileOption::DIRECTORY);
+        parentDE = getPathLastDirectoryEntry(mFS, mFS->mWorkingDirectory.mStartCluster, mAccumulator,
+                                             EFileOption::DIRECTORY);
 
     if (mFS->getDirectoryEntryCount(toRemoveDE.mStartCluster) > DEFAULT_DIR_SIZE)
         throw InvalidOptionException(NOT_EMPTY_ERROR);
@@ -562,11 +669,27 @@ bool OutcpCommand::validateArguments() {
 }
 
 bool LoadCommand::run() {
+    std::ifstream stream(mOpt1, std::ios::binary);
+
+    if (!stream.good())
+        throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
+
+    std::vector<std::string> args;
+    for (std::string line; getline(stream, line);) {
+        std::cout << line << std::endl;
+        args = split(line, " ");
+        try {
+            handleUserInput(args, mFS);
+        } catch (InvalidOptionException &ex) { // ¯\_(ツ)_/¯
+            std::cout << ex.what() << std::endl;
+        }
+    }
     return true;
 }
 
 bool LoadCommand::validateArguments() {
-    return mOptCount == 1;
+    if (mOptCount != 1) return false;
+    return true;
 }
 
 bool FormatCommand::run() {

@@ -6,6 +6,9 @@
 #include <sstream>
 #include <cmath>
 
+
+
+
 DirectoryEntry::DirectoryEntry(const std::string &&itemName, bool mIsFile, int mSize, int mStartCluster) :
         mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
     if (itemName.length() >= ITEM_NAME_LENGTH)
@@ -395,9 +398,9 @@ void FileSystem::flush() {
     mStream.flush();
 }
 
-std::string FileSystem::getWorkingDirectoryPath() {
+void FileSystem::updateWorkingDirectoryPath() {
     if (mWorkingDirectory.mStartCluster == 0) {
-        return "/";
+        mWorkingDirectoryPath = "/";
     }
     std::queue<std::string> fileNames{};
 
@@ -430,8 +433,13 @@ std::string FileSystem::getWorkingDirectoryPath() {
         stream << "/" << fileNames.front().c_str();
         fileNames.pop();
     }
-    return stream.str();
+    mWorkingDirectoryPath = stream.str();
 }
+
+std::string FileSystem::getWorkingDirectoryPath() {
+    return mWorkingDirectoryPath;
+}
+
 
 
 

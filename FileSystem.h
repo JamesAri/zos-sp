@@ -76,6 +76,7 @@ public:
  */
 class FileSystem {
     const std::string mFileName;
+    std::string mWorkingDirectoryPath{"/"};
 public:
     std::fstream mStream;
 
@@ -91,6 +92,8 @@ public:
     void formatFS(int diskSize = DEFAULT_FORMAT_SIZE);
 
     bool getDirectory(int cluster, DirectoryEntry &de);
+
+    void updateWorkingDirectoryPath();
 
     std::string getWorkingDirectoryPath();
 
