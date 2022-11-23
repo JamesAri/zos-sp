@@ -3,6 +3,7 @@
 
 #include "ICommand.h"
 
+// FS API connection layer
 bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<FileSystem> &pFS);
 
 
@@ -21,8 +22,8 @@ public:
     using ICommand::registerFS;
 
 private:
-    std::vector<std::string> mAccumulator;
-    DirectoryEntry mFromDE;
+    std::vector<std::string> mAccumulator1;
+    std::vector<std::string> mAccumulator2;
 
     bool validateArguments() override;
 

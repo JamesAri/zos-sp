@@ -120,44 +120,44 @@ void pathCheck(const std::string &path) {
 //===============================================================================
 
 bool CpCommand::run() {
-    auto newFileName = mAccumulator.back();
-    mAccumulator.pop_back();
+    // File to copy
+    DirectoryEntry fromDE = mFS->getLastRelativeDirectoryEntry(mAccumulator1, EFileOption::FILE);
 
-    auto parentDE = mFS->getLastRelativeDirectoryEntry(mAccumulator, EFileOption::DIRECTORY);
+    // New file name
+    auto newFileName = mAccumulator2.back();
+    mAccumulator2.pop_back();
+
+    // New file's directory
+    auto parentDE = mFS->getLastRelativeDirectoryEntry(mAccumulator2, EFileOption::DIRECTORY);
 
     if (mFS->directoryEntryExists(parentDE.mStartCluster, newFileName, true))
         throw InvalidOptionException(EXIST_ERROR);
 
     // From clusters
-    auto fromClusters = mFS->getFatClusterChain(mFromDE.mStartCluster, mFromDE.mSize);
+    auto fromClusters = mFS->getFatClusterChain(fromDE.mStartCluster, fromDE.mSize);
 
     // Get free clusters
     auto freeClusters = mFS->getFreeClusters(static_cast<int>(fromClusters.size()));
 
-    // Mark clusters in FAT tables
+    // Chain clusters in FAT tables
     mFS->makeFatChain(freeClusters);
 
     // Move data
-    auto fileData = mFS->readFile(fromClusters, mFromDE.mSize);
+    auto fileData = mFS->readFile(fromClusters, fromDE.mSize);
     mFS->writeFile(freeClusters, fileData);
 
-    // Write directory entry
-    DirectoryEntry newFileDE{newFileName, true, mFromDE.mSize, freeClusters.at(0)};
+    // Write new directory entry
+    DirectoryEntry newFileDE{newFileName, true, fromDE.mSize, freeClusters.at(0)};
     mFS->writeNewDirectoryEntry(parentDE.mStartCluster, newFileDE);
     return true;
 }
 
 bool CpCommand::validateArguments() {
     if (mOptCount != 2) return false;
-
     pathCheck(mOpt1);
     pathCheck(mOpt2);
-
-    auto fileNames = split(mOpt1, "/");
-    DirectoryEntry fromDE = mFS->getLastRelativeDirectoryEntry(fileNames, EFileOption::FILE);
-
-    mFromDE = fromDE;
-    mAccumulator = split(mOpt2, "/");
+    mAccumulator1 = split(mOpt1, "/");
+    mAccumulator2 = split(mOpt2, "/");
     return true;
 }
 
@@ -192,8 +192,7 @@ bool RmCommand::run() {
 
     auto clusters = mFS->getFatClusterChain(fileDE.mStartCluster, fileDE.mSize);
     mFS->labelFatClusterChain(clusters, FAT_UNUSED);
-    mFS->removeDirectoryEntry(directoryDE.mStartCluster, fileDE.mItemName, true);
-    return true;
+    return mFS->removeDirectoryEntry(directoryDE.mStartCluster, fileDE.mItemName, true);
 }
 
 bool RmCommand::validateArguments() {
@@ -394,6 +393,7 @@ bool IncpCommand::validateArguments() {
     stream.seekg(0, std::ios::beg);
 
     mBuffer = std::vector<char>(size);
+
     if (!stream.read(mBuffer.data(), size))
         throw std::runtime_error(FILE_READ_ERROR);
 
@@ -482,9 +482,7 @@ bool FormatCommand::validateArguments() {
 
 bool DefragCommand::run() {
     auto fileDE = mFS->getLastRelativeDirectoryEntry(mAccumulator, EFileOption::FILE);
-
     mAccumulator.pop_back();
-
     auto parentDE = mFS->getLastRelativeDirectoryEntry(mAccumulator, EFileOption::DIRECTORY);
 
     auto clusters = mFS->getFatClusterChain(fileDE.mStartCluster, fileDE.mSize);
@@ -506,7 +504,7 @@ bool DefragCommand::run() {
     clusters = mFS->getFreeClusters(static_cast<int>(clusters.size()), true);
     // Write data
     mFS->writeFile(clusters, fileData);
-    // Mark continuous clusters in FAT tables
+    // Chain continuous clusters in FAT tables
     mFS->makeFatChain(clusters);
     // Edit directory entry
     int oldCluster = fileDE.mStartCluster;

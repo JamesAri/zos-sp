@@ -22,31 +22,8 @@
   <component name="ChangeListManager">
     <list default="true" id="3b54c10d-413f-4617-b6ea-dd2954fd685e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Commands.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Commands.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FileSystem.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/FileSystem.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FileSystem.h" beforeDir="false" afterPath="$PROJECT_DIR$/FileSystem.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/codemodel-v2-71f36aed8ff6bdd74a15.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/index-2022-11-23T10-49-14-0076.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/target-zos_sp-Debug-4ae6396aa15b0507865e.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/BootSector.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/BootSector.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/DirectoryEntry.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/DirectoryEntry.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/FAT.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/FAT.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/FileSystem.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/zos_sp.dir/FileSystem.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/FS_A20B0243P.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/build.ninja" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/build.ninja" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/meme.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/poem.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/random" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/test.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/vid1.wbm" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/vid2.wbm" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/wtf.gif" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/output/zero" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/stream-utils.h" beforeDir="false" afterPath="$PROJECT_DIR$/utils/stream-utils.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Commands.h" beforeDir="false" afterPath="$PROJECT_DIR$/Commands.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -129,7 +106,7 @@
       <workItem from="1668187459602" duration="50273000" />
       <workItem from="1668380897092" duration="27688000" />
       <workItem from="1668584387122" duration="125768000" />
-      <workItem from="1669200401501" duration="4091000" />
+      <workItem from="1669200401501" duration="5496000" />
     </task>
     <servers />
   </component>
