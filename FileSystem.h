@@ -2,64 +2,32 @@
 #define ZOS_SP_FILESYSTEM_H
 
 #include "definitions.h"
+#include "BootSector.h"
+#include "DirectoryEntry.h"
 #include <fstream>
 #include <queue>
 
-class DirectoryEntry {
+enum class EFileOption {
+    FILE,
+    DIRECTORY,
+    UNSPECIFIED,
+};
+
+class InvalidOptionException : public std::exception {
+private:
+    std::string mErrMsg;
 public:
-    std::string mItemName;
-    bool mIsFile;
-    int mSize;
-    int mStartCluster;
+    InvalidOptionException() : mErrMsg("invalid option(s)") {}
 
-    DirectoryEntry(){}
+    explicit InvalidOptionException(std::string &&errMsg) : mErrMsg(errMsg) {}
+    explicit InvalidOptionException(const std::string &errMsg) : mErrMsg(errMsg) {}
 
-    DirectoryEntry(const std::string &&mItemName, bool mIsFile, int mSize, int mStartCluster);
-
-    DirectoryEntry(const std::string &mItemName, bool mIsFile, int mSize, int mStartCluster);
-
-    static const int SIZE = ITEM_NAME_LENGTH + sizeof(mIsFile) + sizeof(mSize) + sizeof(mStartCluster);
-
-    void write(std::fstream &f);
-
-    void read(std::fstream &f);
-
-    friend std::ostream &operator<<(std::ostream &os, DirectoryEntry const &fs);
+    const char *what() const _NOEXCEPT override {
+        return this->mErrMsg.c_str();
+    }
 };
 
 constexpr int MAX_ENTRIES = CLUSTER_SIZE / DirectoryEntry::SIZE;
-
-class BootSector {
-private:
-    int mFatSize;
-public:
-    // actual memory structure
-    std::string mSignature;
-    int mClusterSize;
-    int mClusterCount;
-    int mDiskSize;
-    int mFatCount;
-    int mFat1StartAddress;
-    int mDataStartAddress;     //adresa pocatku datovych bloku (hl. adresar)
-    int mPaddingSize;
-
-    static const int SIZE = SIGNATURE_LENGTH + sizeof(mClusterSize) + sizeof(mClusterCount) +
-                            sizeof(mDiskSize) + sizeof(mFatCount) + sizeof(mFat1StartAddress) +
-                            sizeof(mDataStartAddress) + sizeof(mPaddingSize);
-
-    BootSector(){}
-
-    explicit BootSector(int diskSize);
-
-    void write(std::fstream &f);
-
-    void read(std::fstream &f);
-
-    friend std::ostream &operator<<(std::ostream &os, BootSector const &fs);
-
-    int getFatSize() const { return this->mFatSize; };
-};
-
 
 /**
  * FS MEMORY STRUCTURE:
@@ -111,29 +79,19 @@ public:
 
     int clusterToFatAddress(int cluster) const;
 
+    std::vector<int> getFreeClusters(int count = 1, bool ordered = false);
+
     void seek(int pos);
 
     void flush();
+
+    void seekStreamToDataCluster(int cluster);
+
+    int getDirectoryNextFreeEntryAddress(int cluster);
+
+    void writeNewDirectoryEntry(int directoryCluster, DirectoryEntry &newDE);
+
+    void writeToFatByCluster(int cluster, int label);
 };
-
-
-class FAT {
-private:
-    FAT(){}
-
-public:
-    static void write(std::fstream &f, int32_t pos, int32_t label);
-
-    static void write(std::fstream &f, int32_t label);
-
-    static int read(std::fstream &f, int32_t pos);
-
-    static int read(std::fstream &f);
-
-    static void wipe(std::ostream &f, int32_t startAddress, int32_t clusterCount);
-
-    static std::vector<int> getFreeClusters(std::shared_ptr<FileSystem> &fs, int count = 1, bool ordered = false);
-};
-
 
 #endif //ZOS_SP_FILESYSTEM_H

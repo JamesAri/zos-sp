@@ -8,20 +8,6 @@
 #include <utility>
 #include <stdexcept>
 
-class InvalidOptionException : public std::exception {
-private:
-    std::string mErrMsg;
-public:
-    InvalidOptionException() : mErrMsg("invalid option(s)") {}
-
-    explicit InvalidOptionException(std::string &&errMsg) : mErrMsg(errMsg) {}
-    explicit InvalidOptionException(const std::string &errMsg) : mErrMsg(errMsg) {}
-
-    const char *what() const _NOEXCEPT override {
-        return this->mErrMsg.c_str();
-    }
-};
-
 class ICommand {
 private:
     virtual bool validateArguments() = 0;

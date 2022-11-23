@@ -1,4 +1,5 @@
 #include "FileSystem.h"
+#include "FAT.h"
 #include "utils/stream-utils.h"
 #include "utils/validators.h"
 
@@ -6,158 +7,19 @@
 #include <sstream>
 #include <cmath>
 
-DirectoryEntry::DirectoryEntry(const std::string &&itemName, bool mIsFile, int mSize, int mStartCluster) :
-        mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
-    if (itemName.length() >= ITEM_NAME_LENGTH)
-        throw std::runtime_error(DE_ITEM_NAME_LENGTH_ERROR);
-    mItemName = itemName + std::string(ITEM_NAME_LENGTH - itemName.length(), '\00');
-}
-
-DirectoryEntry::DirectoryEntry(const std::string &itemName, bool mIsFile, int mSize, int mStartCluster) :
-        mIsFile(mIsFile), mSize(mSize), mStartCluster(mStartCluster) {
-    if (itemName.length() >= ITEM_NAME_LENGTH) {
-        throw std::runtime_error(DE_ITEM_NAME_LENGTH_ERROR);
-    }
-    mItemName = itemName + std::string(ITEM_NAME_LENGTH - itemName.length(), '\00');
-}
-
-void DirectoryEntry::write(std::fstream &f) {
-    writeToStream(f, mItemName, ITEM_NAME_LENGTH);
-    writeToStream(f, mIsFile);
-    writeToStream(f, mSize);
-    writeToStream(f, mStartCluster);
-}
-
-void DirectoryEntry::read(std::fstream &f) {
-    readFromStream(f, mItemName, ITEM_NAME_LENGTH);
-    readFromStream(f, mIsFile);
-    readFromStream(f, mSize);
-    readFromStream(f, mStartCluster);
-}
-
-std::ostream &operator<<(std::ostream &os, DirectoryEntry const &di) {
-    return os << "  ItemName: " << di.mItemName.c_str() << "\n"
-              << "  IsFile: " << di.mIsFile << "\n"
-              << "  Size: " << di.mSize << "\n"
-              << "  StartCluster: " << di.mStartCluster << "\n";
-}
-
-void FAT::write(std::fstream &f, int32_t label) {
-    writeToStream(f, label);
-}
-
-void FAT::write(std::fstream &f, int32_t pos, int32_t label) {
-    f.seekp(pos);
-    FAT::write(f, label);
-}
-
-int FAT::read(std::fstream &f) {
-    int32_t clusterTag;
-    readFromStream(f, clusterTag);
-    return clusterTag;
-}
-
-int FAT::read(std::fstream &f, int32_t pos) {
-    f.seekg(pos);
-    return FAT::read(f);
-}
-
-void FAT::wipe(std::ostream &f, int32_t startAddress, int32_t clusterCount) {
-    f.seekp(startAddress);
-
-    auto labelUnused = reinterpret_cast<const char *>(&FAT_UNUSED);
-    for (int i = 0; i < clusterCount; i++) {
-        f.write(labelUnused, sizeof(FAT_UNUSED));
-    }
-}
-
-std::vector<int> FAT::getFreeClusters(std::shared_ptr<FileSystem> &fs, int count, bool ordered) {
-    if (count > fs->mBootSector.mClusterCount)
-        throw std::runtime_error("not enough space, format file system");
-
-    fs->seek(fs->mBootSector.mFat1StartAddress);
-
-    int32_t label;
-    std::vector<int> clusters{};
-    clusters.reserve(count);
-    for (int32_t i = 0; i < fs->mBootSector.mClusterCount && clusters.size() < count; i++) {
-        readFromStream(fs->mStream, label);
-        if (label == FAT_UNUSED) {
-            if(ordered && !clusters.empty()) {
-                if(clusters.back() + 1 != i) {
-                    clusters.clear();
-                    continue;
-                }
-            }
-            clusters.push_back(i);
-        }
-    }
-
-    if (clusters.size() != count)
-        throw std::runtime_error("not enough space, format file system or free some space");
-
-    return clusters;
-}
-
-
-BootSector::BootSector(int diskSize) : mDiskSize(diskSize * FORMAT_UNIT) {
-    mSignature = SIGNATURE;
-    mClusterSize = CLUSTER_SIZE;
-    mFatCount = FAT_COUNT;
-
-    size_t freeSpaceInBytes = mDiskSize - BootSector::SIZE;
-    mClusterCount = static_cast<int>(freeSpaceInBytes / (sizeof(int32_t) + mClusterSize));
-    mFatSize = static_cast<int>(mClusterCount * sizeof(int32_t));
-    mFat1StartAddress = BootSector::SIZE;
-
-    size_t dataSize = mClusterCount * mClusterSize;
-    size_t fatTablesSize = mFatSize * mFatCount;
-    mPaddingSize = static_cast<int>(freeSpaceInBytes - (dataSize + fatTablesSize));
-
-    auto fatEndAddress = mFat1StartAddress + mFatSize;
-    mDataStartAddress = static_cast<int>(mPaddingSize + fatEndAddress);
-}
-
-void BootSector::write(std::fstream &f) {
-    writeToStream(f, mSignature, SIGNATURE_LENGTH);
-    writeToStream(f, mClusterSize);
-    writeToStream(f, mClusterCount);
-    writeToStream(f, mDiskSize);
-    writeToStream(f, mFatCount);
-    writeToStream(f, mFat1StartAddress);
-    writeToStream(f, mDataStartAddress);
-    writeToStream(f, mPaddingSize);
-}
-
-void BootSector::read(std::fstream &f) {
-    readFromStream(f, mSignature, SIGNATURE_LENGTH);
-    readFromStream(f, mClusterSize);
-    readFromStream(f, mClusterCount);
-    readFromStream(f, mDiskSize);
-    readFromStream(f, mFatCount);
-    readFromStream(f, mFat1StartAddress);
-    readFromStream(f, mDataStartAddress);
-    readFromStream(f, mPaddingSize);
-
-    mFatSize = static_cast<int>(mClusterCount * sizeof(int32_t));
-}
-
-std::ostream &operator<<(std::ostream &os, BootSector const &bs) {
-    return os << "  Signature: " << bs.mSignature.c_str() << "\n"
-              << "  ClusterSize: " << bs.mClusterSize << "B\n"
-              << "  ClusterCount: " << bs.mClusterCount << "\n"
-              << "  DiskSize: " << bs.mDiskSize / FORMAT_UNIT << "MB\n"
-              << "  FatCount: " << bs.mFatCount << "\n"
-              << "  Fat1StartAddress: " << bs.mFat1StartAddress << "-" << bs.mFat1StartAddress + bs.mFatSize << "\n"
-              << "  Padding size: " << bs.mPaddingSize << "B\n"
-              << "  PaddingAddress: " << bs.mFat1StartAddress + bs.mFatSize << "-" << bs.mDataStartAddress << "\n"
-              << "  DataStartAddress: " << bs.mDataStartAddress << "\n";
-}
-
 bool fileExists(const std::string &fileName) {
     std::ifstream stream(fileName);
     return stream.good();
 }
+
+bool isSpecialLabel(int label) {
+    return label == FAT_UNUSED || label == FAT_FILE_END || label == FAT_BAD_CLUSTER;
+}
+
+
+
+// ================================================================================
+// ================================================================================
 
 FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
     bool exists = fileExists(fileName);
@@ -453,6 +315,219 @@ bool FileSystem::editDirectoryEntry(int parentCluster, int childCluster, Directo
         }
     }
     return false;
+}
+
+std::vector<int> FileSystem::getFreeClusters(int count, bool ordered) {
+    if (count > mBootSector.mClusterCount)
+        throw std::runtime_error("not enough space, format file system");
+
+    seek(mBootSector.mFat1StartAddress);
+
+    int32_t label;
+    std::vector<int> clusters{};
+    clusters.reserve(count);
+    for (int32_t i = 0; i < mBootSector.mClusterCount && clusters.size() < count; i++) {
+        readFromStream(mStream, label);
+        if (label == FAT_UNUSED) {
+            if(ordered && !clusters.empty()) {
+                if(clusters.back() + 1 != i) {
+                    clusters.clear();
+                    continue;
+                }
+            }
+            clusters.push_back(i);
+        }
+    }
+
+    if (clusters.size() != count)
+        throw std::runtime_error("not enough space, format file system or free some space");
+
+    return clusters;
+}
+
+void FileSystem::seekStreamToDataCluster(int cluster) {
+    int32_t address = clusterToDataAddress(cluster);
+    seek(address);
+}
+
+int FileSystem::getDirectoryNextFreeEntryAddress(int cluster) {
+    auto address = clusterToDataAddress(cluster);
+    seek(address);
+
+    DirectoryEntry temp{};
+    for (int entriesCount = 0; entriesCount < MAX_ENTRIES; entriesCount++) {
+        temp.read(mStream);
+        if (!isAllocatedDirectoryEntry(temp.mItemName)) {
+            if (entriesCount < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+            return address + entriesCount * DirectoryEntry::SIZE;
+        }
+    }
+    throw std::runtime_error(DE_LIMIT_REACHED_ERROR);
+}
+
+void FileSystem::writeNewDirectoryEntry(int directoryCluster, DirectoryEntry &newDE) {
+    int32_t freeParentEntryAddr = getDirectoryNextFreeEntryAddress(directoryCluster);
+    seek(freeParentEntryAddr);
+    newDE.write(mStream);
+}
+
+void FileSystem::writeToFatByCluster(int cluster, int label) {
+    int address = clusterToFatAddress(cluster);
+    FAT::write(mStream, address, label);
+}
+
+int FileSystem::readFromFatByCluster(int cluster) {
+    int address = clusterToFatAddress(cluster);
+    return FAT::read(mStream, address);
+}
+
+
+/**
+ * @param parentDE modifies item name to ".."
+ * @param newDE modifies item name to "."
+ */
+void FileSystem::writeDirectoryEntryReferences(DirectoryEntry &parentDE, DirectoryEntry &newDE,
+                                   int newFreeCluster) {
+    // Erase previous cluster data
+    seekStreamToDataCluster(newFreeCluster);
+    auto clusterSize = mBootSector.mClusterSize;
+    char emptyCluster[CLUSTER_SIZE] = {'\00'};
+    mStream.write(emptyCluster, clusterSize);
+
+    // Create new directory "." at new cluster
+    seekStreamToDataCluster(newFreeCluster);
+    newDE.mItemName = ".";
+    newDE.write(mStream);
+
+    // Create new directory ".." at new cluster
+    parentDE.mItemName = "..";
+    parentDE.write(mStream);
+
+
+}
+
+std::vector<std::string> FileSystem::getDirectoryContents(int directoryCluster) {
+    std::vector<std::string> fileNames{};
+    DirectoryEntry de{};
+    seekStreamToDataCluster(directoryCluster);
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        de.read(mStream);
+        if (!isAllocatedDirectoryEntry(de.mItemName)) {
+            if (i < DEFAULT_DIR_SIZE)
+                throw std::runtime_error(DE_MISSING_REFERENCES_ERROR);
+        }
+        fileNames.push_back(de.mItemName);
+    }
+    return fileNames;
+}
+
+
+bool FileSystem::directoryEntryExists(int cluster, const std::string &itemName, bool isFile) {
+    DirectoryEntry temp{};
+    return findDirectoryEntry(cluster, itemName, temp, isFile);
+}
+
+void FileSystem::makeFatChain(std::vector<int> &clusters) {
+    for (int i = 0; i < clusters.size() - 1; i++) {
+        writeToFatByCluster(clusters.at(i), clusters.at(i + 1));
+    }
+    writeToFatByCluster(clusters.back(), FAT_FILE_END);
+}
+
+void FileSystem::labelFatClusterChain(std::vector<int> &clusters, const int32_t label) {
+    for (auto &it: clusters) {
+        writeToFatByCluster(it, label);
+    }
+}
+
+/**
+ * Returns FAT cluster chain, where last cluster points to FAT_FILE_END label.
+ * E.g.:
+ *  FAT chain: 1 -> 3 -> 5 -> 2 -> FAT_FILE_END
+ *  Cluster chain: {1, 3, 5, 2}
+ */
+std::vector<int> FileSystem::getFatClusterChain(int fromCluster, int fileSize) {
+    int clusterCount = getNeededClustersCount(fileSize);
+
+    if (clusterCount > mBootSector.mClusterCount)
+        throw std::runtime_error("internal error, incorrect cluster count");
+
+    std::vector<int> clusters{};
+    clusters.reserve(clusterCount);
+    int curCluster = fromCluster;
+    for (int i = 0; i < clusterCount - 1; i++) {
+        clusters.push_back(curCluster);
+        curCluster = readFromFatByCluster(curCluster);
+        if (isSpecialLabel(curCluster) || curCluster >= mBootSector.mClusterCount) break;
+    }
+    clusters.push_back(curCluster);
+    int lastLabel = readFromFatByCluster(curCluster);
+    if (clusters.size() != clusterCount || lastLabel != FAT_FILE_END)
+        throw std::runtime_error("filesystem corrupted"); // todo mark as bad clusters
+
+    return clusters;
+}
+
+void FileSystem::writeFile(std::vector<int> &clusters, std::vector<char> &buffer) {
+    int filesSize = static_cast<int>(buffer.size());
+
+    if (!filesSize) return;
+
+    int clusterSize = mBootSector.mClusterSize;
+    int trailingBytes = filesSize % clusterSize;
+    trailingBytes = trailingBytes ? trailingBytes : clusterSize;
+
+    for (int i = 0; i < clusters.size() - 1; i++) {
+        seekStreamToDataCluster(clusters.at(i));
+        mStream.write((char *) (&buffer[i * clusterSize]), clusterSize);
+    }
+    seekStreamToDataCluster(clusters.back());
+    mStream.write((char *) (&buffer[filesSize - trailingBytes]), trailingBytes);
+    flush();
+}
+
+std::vector<char> FileSystem::readFile(std::vector<int> &clusters, int fileSize) {
+    int clusterSize = mBootSector.mClusterSize;
+    int trailingBytes = fileSize % clusterSize;
+    trailingBytes = trailingBytes ? trailingBytes : clusterSize;
+
+    std::vector<char> buffer(fileSize);
+    for (int i = 0; i < clusters.size() - 1; i++) {
+        seekStreamToDataCluster(clusters.at(i));
+        mStream.read((char *) (&buffer[i * clusterSize]), clusterSize);
+    }
+    seekStreamToDataCluster(clusters.back());
+    mStream.read((char *) (&buffer[fileSize - trailingBytes]), trailingBytes);
+    return buffer;
+}
+
+DirectoryEntry FileSystem::getPathLastDirectoryEntry(int startCluster,
+                                         std::vector<std::string> &fileNames,
+                                         EFileOption lastEntryOpt = EFileOption::UNSPECIFIED) {
+    DirectoryEntry parentDE{};
+
+    if (fileNames.empty())
+        throw std::runtime_error("received empty path");
+
+    int curCluster = startCluster;
+    for (int i = 0; i < fileNames.size() - 1; i++) {
+        if (findDirectoryEntry(curCluster, fileNames.at(i), parentDE, false)) {
+            curCluster = parentDE.mStartCluster;
+        } else {
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+        }
+    }
+    if (lastEntryOpt == EFileOption::DIRECTORY) {
+        if (!findDirectoryEntry(curCluster, fileNames.back(), parentDE, false))
+            throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+    } else if (lastEntryOpt == EFileOption::FILE) {
+        if (!findDirectoryEntry(curCluster, fileNames.back(), parentDE, true))
+            throw InvalidOptionException(FILE_NOT_FOUND_ERROR);
+    } else if (!findDirectoryEntry(curCluster, fileNames.back(), parentDE)) {
+        throw InvalidOptionException(PATH_NOT_FOUND_ERROR);
+    }
+    return parentDE;
 }
 
 

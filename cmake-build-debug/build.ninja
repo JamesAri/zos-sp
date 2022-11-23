@@ -82,6 +82,24 @@ build CMakeFiles/zos_sp.dir/utils/validators.cpp.o: CXX_COMPILER__zos_sp_Debug /
   OBJECT_DIR = CMakeFiles/zos_sp.dir
   OBJECT_FILE_DIR = CMakeFiles/zos_sp.dir/utils
 
+build CMakeFiles/zos_sp.dir/FAT.cpp.o: CXX_COMPILER__zos_sp_Debug /Users/jakub.slechta/git/zos-sp/FAT.cpp || cmake_object_order_depends_target_zos_sp
+  DEP_FILE = CMakeFiles/zos_sp.dir/FAT.cpp.o.d
+  FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk -std=gnu++14
+  OBJECT_DIR = CMakeFiles/zos_sp.dir
+  OBJECT_FILE_DIR = CMakeFiles/zos_sp.dir
+
+build CMakeFiles/zos_sp.dir/BootSector.cpp.o: CXX_COMPILER__zos_sp_Debug /Users/jakub.slechta/git/zos-sp/BootSector.cpp || cmake_object_order_depends_target_zos_sp
+  DEP_FILE = CMakeFiles/zos_sp.dir/BootSector.cpp.o.d
+  FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk -std=gnu++14
+  OBJECT_DIR = CMakeFiles/zos_sp.dir
+  OBJECT_FILE_DIR = CMakeFiles/zos_sp.dir
+
+build CMakeFiles/zos_sp.dir/DirectoryEntry.cpp.o: CXX_COMPILER__zos_sp_Debug /Users/jakub.slechta/git/zos-sp/DirectoryEntry.cpp || cmake_object_order_depends_target_zos_sp
+  DEP_FILE = CMakeFiles/zos_sp.dir/DirectoryEntry.cpp.o.d
+  FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk -std=gnu++14
+  OBJECT_DIR = CMakeFiles/zos_sp.dir
+  OBJECT_FILE_DIR = CMakeFiles/zos_sp.dir
+
 
 # =============================================================================
 # Link build statements for EXECUTABLE target zos_sp
@@ -90,7 +108,7 @@ build CMakeFiles/zos_sp.dir/utils/validators.cpp.o: CXX_COMPILER__zos_sp_Debug /
 #############################################
 # Link the executable zos_sp
 
-build zos_sp: CXX_EXECUTABLE_LINKER__zos_sp_Debug CMakeFiles/zos_sp.dir/main.cpp.o CMakeFiles/zos_sp.dir/Commands.cpp.o CMakeFiles/zos_sp.dir/ICommand.cpp.o CMakeFiles/zos_sp.dir/FileSystem.cpp.o CMakeFiles/zos_sp.dir/utils/string-utils.cpp.o CMakeFiles/zos_sp.dir/utils/validators.cpp.o
+build zos_sp: CXX_EXECUTABLE_LINKER__zos_sp_Debug CMakeFiles/zos_sp.dir/main.cpp.o CMakeFiles/zos_sp.dir/Commands.cpp.o CMakeFiles/zos_sp.dir/ICommand.cpp.o CMakeFiles/zos_sp.dir/FileSystem.cpp.o CMakeFiles/zos_sp.dir/utils/string-utils.cpp.o CMakeFiles/zos_sp.dir/utils/validators.cpp.o CMakeFiles/zos_sp.dir/FAT.cpp.o CMakeFiles/zos_sp.dir/BootSector.cpp.o CMakeFiles/zos_sp.dir/DirectoryEntry.cpp.o
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk
   OBJECT_DIR = CMakeFiles/zos_sp.dir
   POST_BUILD = :
