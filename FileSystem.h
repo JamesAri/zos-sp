@@ -92,6 +92,27 @@ public:
     void writeNewDirectoryEntry(int directoryCluster, DirectoryEntry &newDE);
 
     void writeToFatByCluster(int cluster, int label);
+
+    int readFromFatByCluster(int cluster);
+
+    void writeDirectoryEntryReferences(DirectoryEntry &parentDE, DirectoryEntry &newDE, int newFreeCluster);
+
+    std::vector<std::string> getDirectoryContents(int directoryCluster);
+
+    bool directoryEntryExists(int cluster, const std::string &itemName, bool isFile);
+
+    void makeFatChain(std::vector<int> &clusters);
+
+    void labelFatClusterChain(std::vector<int> &clusters, int32_t label);
+
+    std::vector<int> getFatClusterChain(int fromCluster, int fileSize);
+
+    void writeFile(std::vector<int> &clusters, std::vector<char> &buffer);
+
+    std::vector<char> readFile(std::vector<int> &clusters, int fileSize);
+
+    DirectoryEntry
+    getPathLastDirectoryEntry(int startCluster, std::vector<std::string> &fileNames, EFileOption lastEntryOpt = EFileOption::UNSPECIFIED);
 };
 
 #endif //ZOS_SP_FILESYSTEM_H

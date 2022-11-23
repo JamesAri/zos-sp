@@ -7,3 +7,10 @@
 2760	2850	1669070573595644743	zos_sp	c13d2713e205349d
 5	793	1669053119537469886	CMakeFiles/zos_sp.dir/utils/string-utils.cpp.o	7c811c8f8fe277ae
 2325	4413	1669048994515414850	CMakeFiles/zos_sp.dir/utils/validators.cpp.o	fe9e63e9eb41372c
+4	1773	1669202973515250306	CMakeFiles/zos_sp.dir/ICommand.cpp.o	4867a7959d0cc0bd
+4	1805	1669202973549815190	CMakeFiles/zos_sp.dir/main.cpp.o	f2196f4e5fe7a8c9
+4	1968	1669202973711244646	CMakeFiles/zos_sp.dir/Commands.cpp.o	d41050a4bbeb73df
+1805	3436	1669202975181481821	CMakeFiles/zos_sp.dir/FAT.cpp.o	2d23813181c81368
+1968	3902	1669202975644702291	CMakeFiles/zos_sp.dir/BootSector.cpp.o	90fea98c8a5782a4
+1774	4705	1669202976449937993	CMakeFiles/zos_sp.dir/FileSystem.cpp.o	e092dd54ce06da26
+3437	5888	1669202977632570823	CMakeFiles/zos_sp.dir/DirectoryEntry.cpp.o	223096d572647f40

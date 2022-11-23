@@ -37,7 +37,7 @@ FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
 }
 
 void FileSystem::readVFS() {
-    if(!mStream.is_open()) mStream.close();
+    if (!mStream.is_open()) mStream.close();
     auto mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::ate;
     mStream = std::fstream(mFileName, mode);
     mStream.seekg(0, std::ios::beg);
@@ -57,7 +57,7 @@ std::ostream &operator<<(std::ostream &os, FileSystem const &fs) {
 }
 
 void FileSystem::formatFS(int diskSize) {
-    if(!mStream.is_open()) mStream.close();
+    if (!mStream.is_open()) mStream.close();
     auto mode = std::ios_base::in | std::ios_base::out | std::ios_base::binary | std::ios_base::trunc;
     mStream = std::fstream(mFileName, mode);
 
@@ -329,8 +329,8 @@ std::vector<int> FileSystem::getFreeClusters(int count, bool ordered) {
     for (int32_t i = 0; i < mBootSector.mClusterCount && clusters.size() < count; i++) {
         readFromStream(mStream, label);
         if (label == FAT_UNUSED) {
-            if(ordered && !clusters.empty()) {
-                if(clusters.back() + 1 != i) {
+            if (ordered && !clusters.empty()) {
+                if (clusters.back() + 1 != i) {
                     clusters.clear();
                     continue;
                 }
@@ -387,8 +387,7 @@ int FileSystem::readFromFatByCluster(int cluster) {
  * @param parentDE modifies item name to ".."
  * @param newDE modifies item name to "."
  */
-void FileSystem::writeDirectoryEntryReferences(DirectoryEntry &parentDE, DirectoryEntry &newDE,
-                                   int newFreeCluster) {
+void FileSystem::writeDirectoryEntryReferences(DirectoryEntry &parentDE, DirectoryEntry &newDE, int newFreeCluster) {
     // Erase previous cluster data
     seekStreamToDataCluster(newFreeCluster);
     auto clusterSize = mBootSector.mClusterSize;
@@ -435,7 +434,7 @@ void FileSystem::makeFatChain(std::vector<int> &clusters) {
     writeToFatByCluster(clusters.back(), FAT_FILE_END);
 }
 
-void FileSystem::labelFatClusterChain(std::vector<int> &clusters, const int32_t label) {
+void FileSystem::labelFatClusterChain(std::vector<int> &clusters, int32_t label) {
     for (auto &it: clusters) {
         writeToFatByCluster(it, label);
     }
@@ -502,9 +501,8 @@ std::vector<char> FileSystem::readFile(std::vector<int> &clusters, int fileSize)
     return buffer;
 }
 
-DirectoryEntry FileSystem::getPathLastDirectoryEntry(int startCluster,
-                                         std::vector<std::string> &fileNames,
-                                         EFileOption lastEntryOpt = EFileOption::UNSPECIFIED) {
+DirectoryEntry
+FileSystem::getPathLastDirectoryEntry(int startCluster, std::vector<std::string> &fileNames, EFileOption lastEntryOpt) {
     DirectoryEntry parentDE{};
 
     if (fileNames.empty())
