@@ -112,7 +112,7 @@ public:
     std::vector<char> readFile(std::vector<int> &clusters, int fileSize);
 
     DirectoryEntry
-    getPathLastDirectoryEntry(int startCluster, std::vector<std::string> &fileNames, EFileOption lastEntryOpt = EFileOption::UNSPECIFIED);
+    getLastRelativeDirectoryEntry(std::vector<std::string> &fileNames, EFileOption lastEntryOpt = EFileOption::UNSPECIFIED);
 };
 
 #endif //ZOS_SP_FILESYSTEM_H

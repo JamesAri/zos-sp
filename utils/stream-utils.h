@@ -16,15 +16,9 @@ void readFromStream(std::fstream &stream, T &data, int streamSize = sizeof(T)) {
     stream.read(reinterpret_cast<char *>(&data), streamSize);
 }
 
-void writeToStream(std::fstream &stream, std::string &string, int streamSize) {
-    auto str = string + std::string(streamSize - string.length(), '\00');
-    stream.write(str.c_str(), streamSize);
-}
+void writeToStream(std::fstream &stream, std::string &string, int streamSize);
 
-void readFromStream(std::fstream &stream, std::string &string, int streamSize) {
-    char temp[streamSize];
-    stream.read(temp, streamSize);
-    string = std::string(temp, streamSize);
-}
+void readFromStream(std::fstream &stream, std::string &string, int streamSize);
+
 
 #endif //ZOS_SP_STREAM_UTILS_H

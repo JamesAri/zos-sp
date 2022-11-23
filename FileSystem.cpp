@@ -16,8 +16,6 @@ bool isSpecialLabel(int label) {
     return label == FAT_UNUSED || label == FAT_FILE_END || label == FAT_BAD_CLUSTER;
 }
 
-
-
 // ================================================================================
 // ================================================================================
 
@@ -502,13 +500,14 @@ std::vector<char> FileSystem::readFile(std::vector<int> &clusters, int fileSize)
 }
 
 DirectoryEntry
-FileSystem::getPathLastDirectoryEntry(int startCluster, std::vector<std::string> &fileNames, EFileOption lastEntryOpt) {
-    DirectoryEntry parentDE{};
+FileSystem::getLastRelativeDirectoryEntry(std::vector<std::string> &fileNames, EFileOption lastEntryOpt) {
+    if(fileNames.empty()) return mWorkingDirectory;
 
     if (fileNames.empty())
         throw std::runtime_error("received empty path");
 
-    int curCluster = startCluster;
+    DirectoryEntry parentDE{};
+    int curCluster = mWorkingDirectory.mStartCluster;
     for (int i = 0; i < fileNames.size() - 1; i++) {
         if (findDirectoryEntry(curCluster, fileNames.at(i), parentDE, false)) {
             curCluster = parentDE.mStartCluster;
