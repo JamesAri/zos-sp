@@ -16,8 +16,6 @@ bool isSpecialLabel(int label) {
     return label == FAT_UNUSED || label == FAT_FILE_END || label == FAT_BAD_CLUSTER;
 }
 
-// ================================================================================
-// ================================================================================
 
 FileSystem::FileSystem(std::string &fileName) : mFileName(fileName) {
     bool exists = fileExists(fileName);
@@ -380,7 +378,6 @@ int FileSystem::readFromFatByCluster(int cluster) {
     return FAT::read(mStream, address);
 }
 
-
 /**
  * @param parentDE modifies item name to ".."
  * @param newDE modifies item name to "."
@@ -418,7 +415,6 @@ std::vector<std::string> FileSystem::getDirectoryContents(int directoryCluster) 
     }
     return fileNames;
 }
-
 
 bool FileSystem::directoryEntryExists(int cluster, const std::string &itemName, bool isFile) {
     DirectoryEntry temp{};
@@ -501,7 +497,7 @@ std::vector<char> FileSystem::readFile(std::vector<int> &clusters, int fileSize)
 
 DirectoryEntry
 FileSystem::getLastRelativeDirectoryEntry(std::vector<std::string> &fileNames, EFileOption lastEntryOpt) {
-    if(fileNames.empty()) return mWorkingDirectory;
+    if (fileNames.empty()) return mWorkingDirectory;
 
     if (fileNames.empty())
         throw std::runtime_error("received empty path");
