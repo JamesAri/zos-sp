@@ -18,7 +18,8 @@ Program bude mít jeden parametr a tím bude název Vašeho souborového systém
 
 ## Souborový systém FAT
 
-![[Pasted image 20221123205215.png]]
+![FAT FS](https://www.kencorner.com/wp-content/uploads/2018/03/FATFileSystem.png)
+
 ### Boot sektor (Reserved area)
 
 Sektor na počáteční adrese. Jedná se o logický oddíl obsahující metadata důležitá pro přístupu k souborovému systému. Obsahuje informace jako např. velikost clusterů, velikost sekce, signaturu, atd.
