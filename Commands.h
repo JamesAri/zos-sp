@@ -3,7 +3,7 @@
 
 #include "ICommand.h"
 
-// FS API connection layer
+// FS commands API
 bool handleUserInput(std::vector<std::string> arguments, const std::shared_ptr<FileSystem> &pFS);
 
 

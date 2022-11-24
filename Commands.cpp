@@ -158,6 +158,10 @@ bool CpCommand::validateArguments() {
     pathCheck(mOpt2);
     mAccumulator1 = split(mOpt1, "/");
     mAccumulator2 = split(mOpt2, "/");
+
+    if(mAccumulator2.back().length() >= ITEM_NAME_LENGTH)
+        throw InvalidOptionException(FILE_NAME_TOO_LONG_ERROR);
+
     return true;
 }
 
@@ -182,6 +186,10 @@ bool MvCommand::validateArguments() {
     pathCheck(mOpt2);
     mAccumulator1 = split(mOpt1, "/");
     mAccumulator2 = split(mOpt2, "/");
+
+    if(mAccumulator2.back().length() >= ITEM_NAME_LENGTH)
+        throw InvalidOptionException(FILE_NAME_TOO_LONG_ERROR);
+
     return true;
 }
 
@@ -230,6 +238,8 @@ bool MkdirCommand::validateArguments() {
     if (mOptCount != 1) return false;
     pathCheck(mOpt1);
     mAccumulator = split(mOpt1, "/");
+    if(mAccumulator.back().length() >= ITEM_NAME_LENGTH)
+        throw InvalidOptionException(FILE_NAME_TOO_LONG_ERROR);
     return true;
 }
 
@@ -401,6 +411,10 @@ bool IncpCommand::validateArguments() {
 
     pathCheck(mOpt2);
     mAccumulator = split(mOpt2, "/");
+
+    if(mAccumulator.back().length() >= ITEM_NAME_LENGTH)
+        throw InvalidOptionException(FILE_NAME_TOO_LONG_ERROR);
+
     return true;
 }
 

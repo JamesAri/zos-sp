@@ -38,6 +38,8 @@ const std::string CD_FILE_ERROR{"cannot cd into file"};
 const std::string INVALID_DIR_PATH_ERROR{"invalid directory path"};
 const std::string INVALID_FILE_NAME_ERROR{"invalid file name"};
 const std::string DELETE_DIR_REFERENCE_ERROR{"cannot delete directory reference"};
+const std::string FILE_NAME_TOO_LONG_ERROR{"filename too long"};
+
 
 // Runtime recoverable errors (from specification)
 const std::string PATH_NOT_FOUND_ERROR{"PATH NOT FOUND"};
