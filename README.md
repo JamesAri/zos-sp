@@ -26,7 +26,7 @@ Sektor na počáteční adrese. Jedná se o logický oddíl obsahující metadat
 
 ### File allocation table 
 
-File allocation table, neboli FAT, slouží k mapovaní souborů na jednotlive datvé oblasti (clustery). Soubory poté tvoří jednosměrný řetěz zakončený unikátním znakem označující konec dat souboru. Obvykle existují dvě kopie. Ke specíalní znakům ještě patří zank označující volný cluster a vadný cluster.
+File allocation table, neboli FAT, slouží k mapovaní souborů na jednotlivé datové oblasti (clustery). Soubory poté tvoří jednosměrný řetěz zakončený unikátním znakem označující konec dat souboru. Obvykle existují dvě kopie. Ke specíalním znakům ještě patří znak označující volný cluster a vadný cluster.
 
 ### Datový oddíl
 
@@ -34,7 +34,7 @@ Datový oddíl je členěn do clusterů o stejné velikosti a obsahuje soubory a
 
 Soubory obsahují pouze svá data.
 
-Adresáře se zkládají ze záznamů o stejné velikosti, které z pravidla popisují cílový cluster soubru/podadresáře, zda se jedná o soubor/podadresář, název záznamu a v případě souboru jeho velikost.
+Adresáře se skládají ze záznamů o stejné velikosti, které z pravidla popisují cílový cluster souboru/podadresáře, zda se jedná o soubor/podadresář, název záznamu a v případě souboru jeho velikost.
 
 #### Kořenový adresář
 
@@ -53,11 +53,11 @@ Adresář na počáteční adrese datového oddílu.
 ---
 ## Struktura a řešení aplikace
 
-	Apliakce je řešena v c++.
+	Aplikace je řešena v c++.
 
 ### ICommand
 
-Jednotné rozhrání pro všechny příkazy fs.
+Jednotné rozhraní pro všechny příkazy fs.
 
 Rozhraní je poměrně jednoduché:
 ```
@@ -144,11 +144,11 @@ constexpr ECommands getCommandCode(std::string const &string) {
 }
 ```
 
-kde `string` je užívatelský vstup. Popis příkazů viz. zadání.
+kde `string` je uživatelský vstup. Popis příkazů viz. zadání.
 
 ### FileSystem
 
-Rozhraní se základními operacemi nad fs. Mělo by se jednat o sdílenou implemetnaci všech příkazů. Patří sem např. záskání záznamu z relativní cesty, smazání záznamu, zapsaní souborového řetězu do FAT, získání FAT řetězce, atd.
+Rozhraní se základními operacemi nad fs. Mělo by se jednat o sdílenou implementaci všech příkazů. Patří sem např. získání záznamu z relativní cesty, smazání záznamu, zapsaní souborového řetězu do FAT, získání FAT řetězce, atd.
 
 Jednotlivé prvky fs:
 - BootSector
@@ -166,9 +166,9 @@ Jednotlivé prvky fs:
 
 ---
 
-## Spuštení a běh aplikace
+## Spuštění a běh aplikace
 
-### Spuštení
+### Spuštění
 
 `<executable> <fs_name>`
 
@@ -178,7 +178,7 @@ např.:
 
 ### Běh aplikace
 
-Jedná se o konzolovu aplikaci. Po spuštení se zobrazí:
+Jedná se o konzolovu aplikaci. Po spuštění se zobrazí:
 
 ```
 (... informace o fs ...)
@@ -188,7 +188,7 @@ Jedná se o konzolovu aplikaci. Po spuštení se zobrazí:
 
 a aplikace bude čekat na uživatelský vstup.
 
-Pokud budeme např. chtít vytvořít nový adresář, použijeme příkaz `mkdir`:
+Pokud budeme např. chtít vytvořit nový adresář, použijeme příkaz `mkdir`:
 ```
 / $ mkdir new_dir
 OK
