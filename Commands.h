@@ -18,8 +18,6 @@ PATH NOT FOUND (neexistuje cílová cesta)
 class CpCommand : public ICommand {
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator1;
@@ -42,8 +40,6 @@ class MvCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator1;
@@ -64,8 +60,6 @@ class RmCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;
@@ -87,8 +81,6 @@ class MkdirCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;
@@ -110,8 +102,7 @@ class RmdirCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
+
 
 private:
     std::vector<std::string> mAccumulator;
@@ -134,8 +125,6 @@ class LsCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;
@@ -156,8 +145,6 @@ class CatCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;
@@ -178,8 +165,6 @@ class CdCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;
@@ -199,8 +184,6 @@ class PwdCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     bool validateArguments() override;
@@ -219,8 +202,7 @@ class InfoCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
+
 
 private:
     std::vector<std::string> mAccumulator;
@@ -242,8 +224,6 @@ class IncpCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;
@@ -266,8 +246,6 @@ class OutcpCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;
@@ -289,8 +267,6 @@ class LoadCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     bool validateArguments() override;
@@ -311,8 +287,7 @@ class FormatCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
+
 private:
 
     bool validateArguments() override;
@@ -330,8 +305,6 @@ class DefragCommand : public ICommand {
 
 public:
     using ICommand::ICommand;
-    using ICommand::process;
-    using ICommand::registerFS;
 
 private:
     std::vector<std::string> mAccumulator;

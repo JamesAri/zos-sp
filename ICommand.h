@@ -21,13 +21,14 @@ protected:
     std::string mOpt2;
 
 public:
+    explicit ICommand(const std::vector<std::string> &options);
+
     virtual ~ICommand() = default;
+
+    ICommand &registerFS(const std::shared_ptr<FileSystem> &pFS);
 
     void process();
 
-    explicit ICommand(const std::vector<std::string> &options);
-
-    ICommand &registerFS(const std::shared_ptr<FileSystem> &pFS);
 };
 
 

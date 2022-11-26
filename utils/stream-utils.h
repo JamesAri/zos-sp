@@ -4,8 +4,6 @@
 #include <fstream>
 #include <algorithm>
 
-//todo -> move to cpp?
-
 template<typename T>
 void writeToStream(std::fstream &f, T &data, int streamSize = sizeof(T)) {
     f.write(reinterpret_cast<char *>(&data), streamSize);
